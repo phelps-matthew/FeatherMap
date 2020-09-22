@@ -50,7 +50,7 @@ for name, module in model.named_modules():
 # print(l._parameters.items())
 
 
-def my_named_members(
+def _named_members_subset(
     self,
     get_members_fn,
     prefix="",
@@ -73,7 +73,7 @@ def my_named_members(
             yield name, v
 
 
-def my_named_parameters(
+def named_parameters_subset(
     self,
     prefix: str = "",
     exclude: tuple = (nn.BatchNorm2d),
@@ -83,8 +83,17 @@ def my_named_parameters(
     name of the parameter as well as the parameter itself.
     Args:
         prefix (str): prefix to prepend to all parameter names.
+        recurse (bool): if True, then yields parameters of this module
+            and all submodules. Otherwise, yields only parameters that
+            are direct members of this module.
+    Yields:
+        (string, Parameter): Tuple containing the name and parameter
+    Example::
+        >>> for name, param in self.named_parameters():
+        >>>    if name in ['bias']:
+        >>>        print(param.size())
     """
-    gen = my_named_members(
+    gen = _named_members_subset(
         self,
         lambda module: module._parameters.items(),
         prefix=prefix,
@@ -93,6 +102,29 @@ def my_named_parameters(
     )
     for elem in gen:
         yield elem
+
+
+def parameters_subset(
+    self, exclude: tuple = (nn.BatchNorm2d), recurse: bool = True
+) -> Iterator[Parameter]:
+    r"""Returns an iterator over module parameters.
+    This is typically passed to an optimizer.
+    Args:
+        recurse (bool): if True, then yields parameters of this module
+            and all submodules. Otherwise, yields only parameters that
+            are direct members of this module.
+    Yields:
+        Parameter: module parameter
+    Example::
+        >>> for param in model.parameters():
+        >>>     print(type(param), param.size())
+        <class 'torch.Tensor'> (20L,)
+        <class 'torch.Tensor'> (20L, 1L, 5L, 5L)
+    """
+    for name, param in self.named_parameters_subset(
+        exclude=exclude, recurse=recurse
+    ):
+        yield param
 
 
 [
@@ -108,7 +140,7 @@ print(*dict(model.named_parameters()).keys(), sep="\n")
 # ---------------------------------------------------------------------------- #
 
 # parameters(named_parameters(_named_members(named_modules(named_modules))))
-# net._parameters only exists for explicitly defined layers 
+# net._parameters only exists for explicitly defined layers
 # (i.e. empty for nn.Sequential or nn.ResNet)
 # for a given module, seeks __getattr__;
 
