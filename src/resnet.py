@@ -1,7 +1,8 @@
 # ---------------------------------------------------------------------------- #
 # An implementation of https://arxiv.org/pdf/1512.03385.pdf                    #
 # See section 4.2 for the model architecture on CIFAR-10                       #
-# Some part of the code was referenced from below                              #
+# Some part of the code was referenced from                                    #
+# https://github.com/yunjey/pytorch-tutorial and                               #
 # https://github.com/pytorch/vision/blob/master/torchvision/models/resnet.py   #
 # ---------------------------------------------------------------------------- #
 
