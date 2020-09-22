@@ -5,7 +5,7 @@ import torchvision.transforms as transforms
 from torch.nn import Parameter
 
 
-class hashNet(nn.Module):
+class FeatherNet(nn.Module):
     """my class"""
 
     def __init__(self, module: nn.Module, compress: float) -> None:
