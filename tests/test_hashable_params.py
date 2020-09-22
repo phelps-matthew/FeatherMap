@@ -47,17 +47,21 @@ for name, module in model.named_modules():
     # print(name, type(module))
     continue
 
-#print(l._parameters.items())
+# print(l._parameters.items())
 
 
-def my_named_members(self, get_members_fn, prefix="", recurse=True):
+def my_named_members(
+    self,
+    get_members_fn,
+    prefix="",
+    exclude: tuple = (),
+    recurse=True,
+):
     r"""Helper method for yielding various names + members of modules."""
     memo = set()
-    # iterator
     modules = self.named_modules(prefix=prefix) if recurse else [(prefix, self)]
     for module_prefix, module in modules:
-        if isinstance(module, nn.BatchNorm2d):
-            print("Caught one\n {} {}".format(module_prefix, type(module)))
+        if isinstance(module, exclude):
             continue
         # members from _parameters.items() are odict_items (possibly empty)
         members = get_members_fn(module)
@@ -70,7 +74,10 @@ def my_named_members(self, get_members_fn, prefix="", recurse=True):
 
 
 def my_named_parameters(
-    self, prefix: str = "", recurse: bool = True
+    self,
+    prefix: str = "",
+    exclude: tuple = (nn.BatchNorm2d),
+    recurse: bool = True,
 ) -> Iterator[Tuple[str, Tensor]]:
     r"""Returns an iterator over module parameters, yielding both the
     name of the parameter as well as the parameter itself.
@@ -81,14 +88,19 @@ def my_named_parameters(
         self,
         lambda module: module._parameters.items(),
         prefix=prefix,
+        exclude=exclude,
         recurse=recurse,
     )
     for elem in gen:
         yield elem
 
-print(*dict(my_named_parameters(model)).keys(), sep='\n')
-print('-'*20)
-print(*dict(model.named_parameters()).keys(), sep='\n')
+
+[
+    print(name)
+    for name, v in my_named_parameters(model, exclude=(nn.BatchNorm2d))
+]
+print("-" * 20)
+print(*dict(model.named_parameters()).keys(), sep="\n")
 
 
 # ---------------------------------------------------------------------------- #
@@ -96,7 +108,8 @@ print(*dict(model.named_parameters()).keys(), sep='\n')
 # ---------------------------------------------------------------------------- #
 
 # parameters(named_parameters(_named_members(named_modules(named_modules))))
-# net._parameters only exists for explicitly defined layers (i.e. empty for nn.Sequential or nn.ResNet)
+# net._parameters only exists for explicitly defined layers 
+# (i.e. empty for nn.Sequential or nn.ResNet)
 # for a given module, seeks __getattr__;
 
 
