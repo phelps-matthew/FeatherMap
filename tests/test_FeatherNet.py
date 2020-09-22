@@ -3,6 +3,16 @@ import torch.nn as nn
 import torchvision
 import torchvision.transforms as transforms
 from torch.nn import Parameter
+from src.resnet import ResNet, ResidualBlock
+
+# Device configuration
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+model = ResNet(ResidualBlock, [2, 2, 2]).to(device)
+
+test_params = list(model.parameters())
+
+print(test_params)
 
 
 class FeatherNet(nn.Module):
