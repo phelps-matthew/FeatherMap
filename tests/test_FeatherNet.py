@@ -19,7 +19,7 @@ from typing import (
 
 
 class FeatherNet(nn.Module):
-    """my class"""
+    """Overrides parameters() method."""
 
     def __init__(self, module: nn.Module, compress: float = 1) -> None:
         super().__init__()
@@ -100,17 +100,11 @@ class FeatherNet(nn.Module):
         for elem in gen:
             yield elem
 
-    def hashable_params(self, a):
-        """Return generator of module params that are to be hashed.
-        Ignore BatchNorm2d params"""
-        a = [2, 2]
-        return a
-
-    def hparams_to_W(self) -> torch.tensor:
+    def hparams_to_W(self) -> Tensor:
         """Collect set of hashable params into n x n tensor"""
         pass
 
-    def mhash(self, W: torch.Tensor, compress: float) -> torch.Tensor:
+    def mhash(self, W: Tensor, compress: float) -> Tensor:
         """Create hash tensor (matrix product multi-hash)"""
         # dim_W = torch.size(W)[0]
         # target_size = dim_W*compress
@@ -132,9 +126,10 @@ def main():
     model = ResNet(ResidualBlock, [2, 2, 2]).to(my_device)
     f_model = FeatherNet(model)
 
-    print(*dict(model.named_parameters()).keys(), sep="\n")
-    print(*dict(f_model.named_parameters()).keys(), sep="\n")
-
+    # print(*dict(model.named_parameters()).keys(), sep="\n")
+    # print(*dict(f_model.named_parameters()).keys(), sep="\n")
+    print(*model.fc.named_parameters())
+    del model.fc.weight
 
 if __name__ == "__main__":
     try:
