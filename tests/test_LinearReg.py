@@ -23,20 +23,20 @@ y_train = np.array([[1.7], [2.76], [2.09], [3.19], [1.694], [1.573],
 # Linear regression model
 model = nn.Linear(input_size, output_size)
 w = model.weight
+print(w)
 # print(w)
 # print("state dict: {}".format(model.state_dict()))
 del model.weight
 # print(w.size())
 # print("state dict: {}".format(model.state_dict()))
 # print(model.weight)
-a = Parameter(torch.Tensor([1.0]))
-b = Parameter(torch.Tensor([2.0]))
+a = Parameter(torch.Tensor([[1.0]]))
+b = Parameter(torch.Tensor([[2.0]]))
 c = a @ a + b
 model.weight = c
 print(isinstance(c, nn.Parameter))
 print(c)
 
-exit()
 inputs = torch.from_numpy(x_train)
 print(model(inputs))
 exit()
