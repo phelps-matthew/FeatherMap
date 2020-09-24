@@ -28,24 +28,10 @@ class FeatherNet(nn.Module):
         super().__init__()
         self.module = module
         self.compress = compress
-        self.size_n = self._get_size_n(exclude=exclude)
-        self.size_m = self._get_size_m(exclude=exclude)
-
-    def _get_size_m(self, exclude: tuple()):
-        """Return dimension m from n x m variable matrix (up to errors of order
-        sqrt(n))"""
-        m = ceil((self.compress * self.size_n) / 2)
-        return m
-
-    def _get_size_n(self, exclude: tuple = ()):
-        """Return dimension n from n x n matrix of all weights and biases"""
-        n = ceil(
-            sqrt(
-                self._num_WorB(exclude=exclude, kind="weight")
-                + self._num_WorB(exclude=exclude, kind="bias")
-            )
-        )
-        return n
+        self.size_n = ceil(sqrt(self._num_WandB(exclude=exclude)))
+        self.size_m = ceil((self.compress * self.size_n) / 2)
+        self.V1 = Parameter(Tensor(self.size_n, self.size_m))
+        self.V2 = Parameter(Tensor(self.size_n, self.size_m))
 
     def _num_WorB(self, exclude: tuple = (), kind: str = "weight"):
         """Return total number of weights or biases"""
@@ -53,10 +39,33 @@ class FeatherNet(nn.Module):
             p.numel() for n, p in self.get_WorB(exclude=exclude, kind=kind)
         )
 
+    def _num_WandB(self, exclude: tuple = ()):
+        """Return total number of weights and biases"""
+        return sum(
+            v.numel() for name, v in self.get_WandB(exclude=exclude)
+        )
+
     def get_WorB(self, exclude: tuple = (), kind: str = "weight"):
         for name, module in self.get_modules(exclude=exclude, kind=kind):
             name = name + "." + kind
             yield name, getattr(module, kind)
+
+    def get_WandB(self, exclude: tuple = ()):
+        for name, module, kind in self.get_WandB_modules(exclude=exclude):
+            yield name + '.' + kind, getattr(module, kind)
+
+    def get_WandB_modules(self, exclude: tuple = ()):
+        """Helper function to return weight and bias modules in order"""
+        for name, module in self.named_modules():
+            try:
+                if isinstance(module, exclude):
+                    continue
+                if getattr(module, "weight") is not None:
+                    yield name, module, 'weight'
+                if getattr(module, "bias") is not None:
+                    yield name, module, 'bias'
+            except nn.modules.module.ModuleAttributeError:
+                pass
 
     def get_modules(self, exclude: tuple = (), kind: str = "weight"):
         """Helper function to return weight or bias modules"""
@@ -176,15 +185,17 @@ def main():
     f_model.unregister_params()
     # print("-" * 20)
     [print(name) for name, v in f_model.named_parameters()]
-    print(model.conv.weight.numel())
-    print(model.conv.weight.size())
-    print(f_model._num_WorB())
-    print(f_model._num_WorB(kind="bias"))
+    print("-" * 20)
+    [print(name) for name, v in f_model.get_WandB(exclude=(nn.BatchNorm2d))]
+    #print(model.conv.weight.numel())
+    #print(model.conv.weight.size())
+    #print(f_model._num_WorB())
+    #print(f_model._num_WorB(kind="bias"))
     a = f_model._num_WorB() + f_model._num_WorB(kind="bias")
     print(a)
     print(ceil(sqrt(a)))
     print(f_model.size_n)
-    print(443 ** 2)
+    #print(443 ** 2)
     exit()
 
     # print(*dict(model.named_parameters()).keys(), sep="\n")
