@@ -28,34 +28,36 @@ class FeatherNet(nn.Module):
         super().__init__()
         self.module = module
         self.compress = compress
-        self.size_n = ceil(sqrt(self._num_WandB(exclude=exclude)))
+        self.exclude = exclude
+        self.unregister_params()
+        self.size_n = ceil(sqrt(self.num_WandB()))
         self.size_m = ceil((self.compress * self.size_n) / 2)
         self.V1 = Parameter(torch.randn(self.size_n, self.size_m))
         self.V2 = Parameter(torch.randn(self.size_n, self.size_m))
         self.V = torch.matmul(self.V1, self.V2.transpose(0, 1))
 
-    def WandBtoV(self, exclude: tuple = ()):
+    def WandBtoV(self):
         i, j = 0, 0
         V = self.V.view(-1, 1)
-        for name, v in self.get_WandB(exclude=exclude):
+        for name, v in self.get_WandB():
             v = v.view(-1, 1)
             for j in range(len(v)):
                 v[j] = V[i]
                 i += 1
 
-    def _num_WandB(self, exclude: tuple = ()):
+    def num_WandB(self):
         """Return total number of weights and biases"""
-        return sum(v.numel() for name, v in self.get_WandB(exclude=exclude))
+        return sum(v.numel() for name, v in self.get_WandB())
 
-    def get_WandB(self, exclude: tuple = ()):
-        for name, module, kind in self.get_WandB_modules(exclude=exclude):
+    def get_WandB(self):
+        for name, module, kind in self.get_WandB_modules():
             yield name + "." + kind, getattr(module, kind)
 
-    def get_WandB_modules(self, exclude: tuple = ()):
+    def get_WandB_modules(self):
         """Helper function to return weight and bias modules in order"""
         for name, module in self.named_modules():
             try:
-                if isinstance(module, exclude):
+                if isinstance(module, self.exclude):
                     continue
                 if getattr(module, "weight") is not None:
                     yield name, module, "weight"
@@ -64,33 +66,9 @@ class FeatherNet(nn.Module):
             except nn.modules.module.ModuleAttributeError:
                 pass
 
-    def _num_WorB(self, exclude: tuple = (), kind: str = "weight"):
-        """Return total number of weights or biases"""
-        return sum(
-            p.numel() for n, p in self.get_WorB(exclude=exclude, kind=kind)
-        )
-
-    def get_WorB(self, exclude: tuple = (), kind: str = "weight"):
-        for name, module in self.get_modules(exclude=exclude, kind=kind):
-            name = name + "." + kind
-            yield name, getattr(module, kind)
-
-    def get_modules(self, exclude: tuple = (), kind: str = "weight"):
-        """Helper function to return weight or bias modules"""
-        for name, module in self.named_modules():
-            try:
-                if isinstance(module, exclude):
-                    continue
-                if (
-                    getattr(module, kind) is not None
-                ):  # throws exception if not kind
-                    yield name, module
-            except nn.modules.module.ModuleAttributeError:
-                continue
-
-    def unregister_params(self, exclude: tuple = (), kind: str = "weight"):
-        """Delete params, set attributes as empty Tensors of same shape"""
-        for name, module in self.get_modules(exclude=exclude, kind=kind):
+    def unregister_params(self):
+        """Delete params, set attributes as Tensors of prior data"""
+        for name, module, kind in self.get_WandB_modules():
             try:
                 data = module._parameters[kind].data
                 del module._parameters[kind]
@@ -107,52 +85,11 @@ class FeatherNet(nn.Module):
                     )
                 )
 
-    def parameters(
-        self, recurse: bool = True, exclude: tuple = ()
-    ) -> Iterator[Parameter]:
-        for name, param in self.named_parameters(
-            exclude=exclude, recurse=recurse
-        ):
-            yield param
+    def forward(self, x):
+        self.WandBtoV()
+        return self.module(x)
 
-    def named_parameters(
-        self,
-        prefix: str = "",
-        recurse: bool = True,
-        exclude: tuple = (),
-    ) -> Iterator[Tuple[str, Tensor]]:
-        gen = self._named_members(
-            lambda module: module._parameters.items(),
-            prefix=prefix,
-            recurse=recurse,
-            exclude=exclude,
-        )
-        for elem in gen:
-            yield elem
 
-    def _named_members(
-        self,
-        get_members_fn,
-        prefix="",
-        recurse=True,
-        exclude: tuple = (),
-    ):
-        r"""Helper method for yielding various names + members of modules."""
-        memo = set()
-        modules = (
-            self.named_modules(prefix=prefix) if recurse else [(prefix, self)]
-        )
-        for module_prefix, module in modules:
-            if isinstance(module, exclude):
-                continue
-            # members from _parameters.items() are odict_items (possibly empty)
-            members = get_members_fn(module)
-            for k, v in members:
-                if v is None or v in memo:
-                    continue
-                memo.add(v)
-                name = module_prefix + ("." if module_prefix else "") + k
-                yield name, v
 
 def main():
     # parameters(named_parameters(_named_members(named_modules(named_modules))))
@@ -165,14 +102,12 @@ def main():
     lmodel = nn.Linear(2, 4)
     flmodel = FeatherNet(lmodel, compress=0.5)
     flmodel.unregister_params()
-    flmodel.unregister_params(kind="bias")
-    print(flmodel._num_WandB(), flmodel.size_n, flmodel.size_m)
+    print(flmodel.num_WandB(), flmodel.size_n, flmodel.size_m)
     a = lmodel.weight
     print(a)
     print(flmodel.V)
     flmodel.WandBtoV()
     f_model.unregister_params()
-    f_model.unregister_params(kind="bias")
     f_model.WandBtoV()
     print("V1: {}".format(f_model.V1))
     print("V2: {}".format(f_model.V2))
