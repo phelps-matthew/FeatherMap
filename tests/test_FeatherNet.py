@@ -51,11 +51,9 @@ class FeatherNet(nn.Module):
 
     def num_params(self, exclude: tuple = (), kind: str = "weight"):
         """Return total number of weights or biases"""
-        total = 0
-        for n, p in self.get_params(exclude=exclude, kind=kind):
-            if p is not None:
-                total += p.numel()
-        return total
+        return sum(
+            p.numel() for n, p in self.get_params(exclude=exclude, kind=kind)
+        )
 
     def get_params(self, exclude: tuple = (), kind: str = "weight"):
         for name, module in self.get_modules(exclude=exclude, kind=kind):
@@ -68,8 +66,10 @@ class FeatherNet(nn.Module):
             try:
                 if isinstance(module, exclude):
                     continue
-                getattr(module, kind)  # throw exception if not kind
-                yield name, module
+                if (
+                    getattr(module, kind) is not None
+                ):  # throws exception if not kind
+                    yield name, module
             except nn.modules.module.ModuleAttributeError:
                 continue
 
@@ -168,7 +168,7 @@ def main():
     print(model.conv.weight.numel())
     print(model.conv.weight.size())
     print(f_model.num_params())
-    print(f_model.num_params(kind='bias'))
+    print(f_model.num_params(kind="bias"))
     exit()
 
     # print(*dict(model.named_parameters()).keys(), sep="\n")
