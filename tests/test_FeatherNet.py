@@ -50,35 +50,44 @@ class FeatherNet(nn.Module):
                 yield name, v
 
     def get_weights(self, exclude: tuple = ()):
-        for name, m in self.named_modules():
-            try:
-                if isinstance(m, exclude):
-                    continue
-                yield name, getattr(m, 'weight')
-            except nn.modules.module.ModuleAttributeError:
-                continue
+        for name, module in self.get_modules(exclude=exclude, kind="weight"):
+            name = name + ".weight"
+            yield name, getattr(module, "weight")
 
     def get_bias(self, exclude: tuple = ()):
-        for name, m in self.named_modules():
+        for name, module in self.get_modules(exclude=exclude, kind="bias"):
+            name = name + ".bias"
+            yield name, getattr(module, "bias")
+
+    def get_modules(self, exclude: tuple = (), kind: str = "weight"):
+        """Helper function to return weight or bias modules"""
+        for name, module in self.named_modules():
             try:
-                if isinstance(m, exclude):
+                if isinstance(module, exclude):
                     continue
-                yield name, getattr(m, 'bias')
+                getattr(module, kind)  # throw exception if not kind
+                yield name, module
             except nn.modules.module.ModuleAttributeError:
                 continue
 
-    def del_params(self, exclude: tuple = ()):
-        for name, m in self.named_modules():
+    def unregister_params(self, exclude: tuple = (), kind: str = "weight"):
+        """Delete params, set attributes as empty Tensors of same shape"""
+        for name, module in self.get_modules(exclude=exclude, kind=kind):
             try:
-                if isinstance(m, exclude):
-                    continue
-                del m._parameters["weight"]
-                print("Deleting parameter: {}".format(name + ".weight"))
-                setattr(m, "weight", Tensor([[1.0]]))
-                print("Intialized to type Tensor: {}".format(name + ".weight"))
+                data = module._parameters[kind].data
+                del module._parameters[kind]
+                print(
+                    "Parameter unregistered, assigned to type Tensor: {}".format(
+                        name + "." + kind
+                    )
+                )
+                setattr(module, kind, data)
             except KeyError:
-                continue
-                # print("key error: {}".format(name))
+                print(
+                    "{} is already registered as a {}".format(
+                        name + "." + kind, type(getattr(module, kind))
+                    )
+                )
 
     def parameter_pop(self, exclude: tuple = ()) -> str:
         """Delete weight or bias attribute and return attribute handle"""
@@ -145,14 +154,17 @@ def main():
     # print(*list(filter(lambda x: not(isinstance(x, nn.BatchNorm2d)), f_model.modules())),sep='\n')
     [print(name) for name, v in f_model.named_parameters()]
     print("-" * 20)
-    #f_model.del_params()
-    #[print(name + '.weight') for name, m, in f_model.get_weights(exclude=(nn.BatchNorm2d))]
-    #[print(name + '.bias') for name, m, in f_model.get_bias()]
+    # f_model.del_params()
+    # [print(name + '.weight') for name, m, in f_model.get_weights(exclude=(nn.BatchNorm2d))]
+    # [print(name + '.bias') for name, m, in f_model.get_bias()]
     for name, weight in f_model.get_weights():
-        print(name + '.weight')
         weight = Tensor([[1.0]])
-    for name, weight in f_model.get_weights():
-        print(weight)
+    for name, weight in f_model.get_modules(exclude=(nn.BatchNorm2d)):
+        print(name)
+    f_model.unregister_params()
+    #print("-" * 20)
+    f_model.unregister_params()
+    print(model.fc.weight)
 
     exit()
 
