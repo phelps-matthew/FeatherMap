@@ -58,4 +58,4 @@ plt.legend()
 plt.show()
 
 # Save the model checkpoint
-torch.save(model.state_dict(), 'model.ckpt')
+#torch.save(model.state_dict(), 'model.ckpt')
