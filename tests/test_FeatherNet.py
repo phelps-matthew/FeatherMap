@@ -2,25 +2,13 @@ import torch
 import torch.nn as nn
 from torch.nn import Parameter
 from feathermap.resnet import ResNet, ResidualBlock
-from torch import Tensor, device, dtype
-from typing import (
-    Union,
-    Tuple,
-    Any,
-    Callable,
-    Iterator,
-    Set,
-    Optional,
-    overload,
-    TypeVar,
-    Mapping,
-    Dict,
-)
+from torch import Tensor
+from typing import Iterator, Tuple
 from math import ceil, sqrt
 
 
 class FeatherNet(nn.Module):
-    """Overrides parameters() method."""
+    """Implementation of structured multihashing for model compression"""
 
     def __init__(
         self, module: nn.Module, compress: float = 1, exclude: tuple = ()
@@ -45,15 +33,15 @@ class FeatherNet(nn.Module):
                 v[j] = V[i]
                 i += 1
 
-    def num_WandB(self):
+    def num_WandB(self) -> int:
         """Return total number of weights and biases"""
         return sum(v.numel() for name, v in self.get_WandB())
 
-    def get_WandB(self):
+    def get_WandB(self) -> Iterator[Tuple[str, Tensor]]:
         for name, module, kind in self.get_WandB_modules():
             yield name + "." + kind, getattr(module, kind)
 
-    def get_WandB_modules(self):
+    def get_WandB_modules(self) -> Iterator[Tuple[str, nn.Module, str]]:
         """Helper function to return weight and bias modules in order"""
         for name, module in self.named_modules():
             try:
@@ -66,7 +54,7 @@ class FeatherNet(nn.Module):
             except nn.modules.module.ModuleAttributeError:
                 pass
 
-    def unregister_params(self):
+    def unregister_params(self) -> None:
         """Delete params, set attributes as Tensors of prior data"""
         for name, module, kind in self.get_WandB_modules():
             try:
@@ -85,64 +73,36 @@ class FeatherNet(nn.Module):
                     )
                 )
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         self.WandBtoV()
         return self.module(x)
 
 
-
 def main():
-    # parameters(named_parameters(_named_members(named_modules(named_modules))))
-
     # Device configuration
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    my_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = ResNet(ResidualBlock, [2, 2, 2]).to(my_device)
-    f_model = FeatherNet(model)
-    lmodel = nn.Linear(2, 4)
-    flmodel = FeatherNet(lmodel, compress=0.5)
-    flmodel.unregister_params()
-    print(flmodel.num_WandB(), flmodel.size_n, flmodel.size_m)
-    a = lmodel.weight
-    print(a)
-    print(flmodel.V)
-    flmodel.WandBtoV()
-    f_model.unregister_params()
-    f_model.WandBtoV()
-    print("V1: {}".format(f_model.V1))
-    print("V2: {}".format(f_model.V2))
-    print("V: {}".format(f_model.V))
-    [print(name, v) for name, v in f_model.named_parameters()]
-    # print(f_model.parameter_pop())
-    # [print(name) for name, v in f_model.named_parameters()]
-    # print(*list(filter(lambda x: not(isinstance(x, nn.BatchNorm2d)), f_model.modules())),sep='\n')
-    # [print(name) for name, v in f_model.named_parameters()]
-    # print("-" * 20)
-    # f_model.del_params()
-    # [print(name + '.weight') for name, m, in f_model.get_weights(exclude=(nn.BatchNorm2d))]
-    # [print(name + '.bias') for name, m, in f_model.get_bias()]
-    # for name, weight in f_model.get_modules(exclude=(nn.BatchNorm2d)):
-    #     print(name)
-    # f_model.unregister_params()
-    # print("-" * 20)
-    # [print(name) for name, v in f_model.named_parameters()]
-    # print("-" * 20)
-    # [print(name) for name, v in f_model.get_WandB(exclude=(nn.BatchNorm2d))]
-    # print(model.conv.weight.numel())
-    # print(model.conv.weight.size())
-    # print(f_model._num_WorB())
-    # print(f_model._num_WorB(kind="bias"))
-    # a = f_model._num_WorB() + f_model._num_WorB(kind="bias")
-    # print(a)
-    # print(ceil(sqrt(a)))
-    # print(f_model.size_n)
-    # print(443 ** 2)
-    exit()
+    def linear_test():
+        lmodel = nn.Linear(2, 4).to(device)
+        flmodel = FeatherNet(lmodel, compress=0.5)
+        print(flmodel.num_WandB(), flmodel.size_n, flmodel.size_m)
+        print("V1: {}".format(flmodel.V1))
+        print("V2: {}".format(flmodel.V2))
+        print("V: {}".format(flmodel.V))
+        flmodel.WandBtoV()
+        [print(name, v) for name, v in flmodel.named_parameters()]
 
-    # print(*dict(model.named_parameters()).keys(), sep="\n")
-    # print(*dict(f_model.named_parameters()).keys(), sep="\n")
+    def res_test():
+        rmodel = ResNet(ResidualBlock, [2, 2, 2]).to(device)
+        frmodel = FeatherNet(rmodel).to(device)
+        print(frmodel.num_WandB(), frmodel.size_n, frmodel.size_m)
+        print("V1: {}".format(frmodel.V1))
+        print("V2: {}".format(frmodel.V2))
+        print("V: {}".format(frmodel.V))
+        frmodel.WandBtoV()
+        [print(name, v) for name, v in frmodel.named_parameters()]
 
-    del model.fc.weight
+    linear_test()
 
 
 if __name__ == "__main__":
