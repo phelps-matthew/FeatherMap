@@ -49,15 +49,18 @@ class FeatherNet(nn.Module):
                 name = module_prefix + ("." if module_prefix else "") + k
                 yield name, v
 
-    def get_weights(self, exclude: tuple = ()):
-        for name, module in self.get_modules(exclude=exclude, kind="weight"):
-            name = name + ".weight"
-            yield name, getattr(module, "weight")
+    def num_params(self, exclude: tuple = (), kind: str = "weight"):
+        """Return total number of weights or biases"""
+        total = 0
+        for n, p in self.get_params(exclude=exclude, kind=kind):
+            if p is not None:
+                total += p.numel()
+        return total
 
-    def get_bias(self, exclude: tuple = ()):
-        for name, module in self.get_modules(exclude=exclude, kind="bias"):
-            name = name + ".bias"
-            yield name, getattr(module, "bias")
+    def get_params(self, exclude: tuple = (), kind: str = "weight"):
+        for name, module in self.get_modules(exclude=exclude, kind=kind):
+            name = name + "." + kind
+            yield name, getattr(module, kind)
 
     def get_modules(self, exclude: tuple = (), kind: str = "weight"):
         """Helper function to return weight or bias modules"""
@@ -84,7 +87,7 @@ class FeatherNet(nn.Module):
                 setattr(module, kind, data)
             except KeyError:
                 print(
-                    "{} is already registered as a {}".format(
+                    "{} is already registered as {}".format(
                         name + "." + kind, type(getattr(module, kind))
                     )
                 )
@@ -157,15 +160,15 @@ def main():
     # f_model.del_params()
     # [print(name + '.weight') for name, m, in f_model.get_weights(exclude=(nn.BatchNorm2d))]
     # [print(name + '.bias') for name, m, in f_model.get_bias()]
-    for name, weight in f_model.get_weights():
-        weight = Tensor([[1.0]])
     for name, weight in f_model.get_modules(exclude=(nn.BatchNorm2d)):
         print(name)
     f_model.unregister_params()
-    #print("-" * 20)
-    f_model.unregister_params()
-    print(model.fc.weight)
-
+    # print("-" * 20)
+    [print(name) for name, v in f_model.named_parameters()]
+    print(model.conv.weight.numel())
+    print(model.conv.weight.size())
+    print(f_model.num_params())
+    print(f_model.num_params(kind='bias'))
     exit()
 
     # print(*dict(model.named_parameters()).keys(), sep="\n")
