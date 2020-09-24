@@ -16,46 +16,44 @@ from typing import (
     Mapping,
     Dict,
 )
+from math import ceil, sqrt
 
 
 class FeatherNet(nn.Module):
     """Overrides parameters() method."""
 
-    def __init__(self, module: nn.Module, compress: float = 1) -> None:
+    def __init__(
+        self, module: nn.Module, compress: float = 1, exclude: tuple = ()
+    ) -> None:
         super().__init__()
         self.module = module
+        self.compress = compress
+        self.size_n = self._get_size_n(exclude=exclude)
+        self.size_m = self._get_size_m(exclude=exclude)
 
-    def _named_members(
-        self,
-        get_members_fn,
-        prefix="",
-        recurse=True,
-        exclude: tuple = (),
-    ):
-        r"""Helper method for yielding various names + members of modules."""
-        memo = set()
-        modules = (
-            self.named_modules(prefix=prefix) if recurse else [(prefix, self)]
+    def _get_size_m(self, exclude: tuple()):
+        """Return dimension m from n x m variable matrix (up to errors of order
+        sqrt(n))"""
+        m = ceil((self.compress * self.size_n) / 2)
+        return m
+
+    def _get_size_n(self, exclude: tuple = ()):
+        """Return dimension n from n x n matrix of all weights and biases"""
+        n = ceil(
+            sqrt(
+                self._num_WorB(exclude=exclude, kind="weight")
+                + self._num_WorB(exclude=exclude, kind="bias")
+            )
         )
-        for module_prefix, module in modules:
-            if isinstance(module, exclude):
-                continue
-            # members from _parameters.items() are odict_items (possibly empty)
-            members = get_members_fn(module)
-            for k, v in members:
-                if v is None or v in memo:
-                    continue
-                memo.add(v)
-                name = module_prefix + ("." if module_prefix else "") + k
-                yield name, v
+        return n
 
-    def num_params(self, exclude: tuple = (), kind: str = "weight"):
+    def _num_WorB(self, exclude: tuple = (), kind: str = "weight"):
         """Return total number of weights or biases"""
         return sum(
-            p.numel() for n, p in self.get_params(exclude=exclude, kind=kind)
+            p.numel() for n, p in self.get_WorB(exclude=exclude, kind=kind)
         )
 
-    def get_params(self, exclude: tuple = (), kind: str = "weight"):
+    def get_WorB(self, exclude: tuple = (), kind: str = "weight"):
         for name, module in self.get_modules(exclude=exclude, kind=kind):
             name = name + "." + kind
             yield name, getattr(module, kind)
@@ -92,17 +90,6 @@ class FeatherNet(nn.Module):
                     )
                 )
 
-    def parameter_pop(self, exclude: tuple = ()) -> str:
-        """Delete weight or bias attribute and return attribute handle"""
-        attrs = [
-            ["self."] + module_attribute.rsplit(".", 1)
-            for module_attribute, _ in self.named_parameters(exclude=exclude)
-        ]
-        for a in attrs:
-            print(a)
-            obj = eval("".join(a[:-1]))
-            delattr(obj, a[-1])
-
     def parameters(
         self, recurse: bool = True, exclude: tuple = ()
     ) -> Iterator[Parameter]:
@@ -125,6 +112,30 @@ class FeatherNet(nn.Module):
         )
         for elem in gen:
             yield elem
+
+    def _named_members(
+        self,
+        get_members_fn,
+        prefix="",
+        recurse=True,
+        exclude: tuple = (),
+    ):
+        r"""Helper method for yielding various names + members of modules."""
+        memo = set()
+        modules = (
+            self.named_modules(prefix=prefix) if recurse else [(prefix, self)]
+        )
+        for module_prefix, module in modules:
+            if isinstance(module, exclude):
+                continue
+            # members from _parameters.items() are odict_items (possibly empty)
+            members = get_members_fn(module)
+            for k, v in members:
+                if v is None or v in memo:
+                    continue
+                memo.add(v)
+                name = module_prefix + ("." if module_prefix else "") + k
+                yield name, v
 
     def hparams_to_W(self) -> Tensor:
         """Collect set of hashable params into n x n tensor"""
@@ -167,8 +178,13 @@ def main():
     [print(name) for name, v in f_model.named_parameters()]
     print(model.conv.weight.numel())
     print(model.conv.weight.size())
-    print(f_model.num_params())
-    print(f_model.num_params(kind="bias"))
+    print(f_model._num_WorB())
+    print(f_model._num_WorB(kind="bias"))
+    a = f_model._num_WorB() + f_model._num_WorB(kind="bias")
+    print(a)
+    print(ceil(sqrt(a)))
+    print(f_model.size_n)
+    print(443 ** 2)
     exit()
 
     # print(*dict(model.named_parameters()).keys(), sep="\n")
