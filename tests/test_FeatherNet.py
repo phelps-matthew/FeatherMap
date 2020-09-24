@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.nn import Parameter
-from src.resnet import ResNet, ResidualBlock
+from feathermap.resnet import ResNet, ResidualBlock
 from torch import Tensor, device, dtype
 from typing import (
     Union,
@@ -49,23 +49,51 @@ class FeatherNet(nn.Module):
                 name = module_prefix + ("." if module_prefix else "") + k
                 yield name, v
 
+    def get_weights(self, exclude: tuple = ()):
+        for name, m in self.named_modules():
+            try:
+                if isinstance(m, exclude):
+                    continue
+                yield name, getattr(m, 'weight')
+            except nn.modules.module.ModuleAttributeError:
+                continue
+
+    def get_bias(self, exclude: tuple = ()):
+        for name, m in self.named_modules():
+            try:
+                if isinstance(m, exclude):
+                    continue
+                yield name, getattr(m, 'bias')
+            except nn.modules.module.ModuleAttributeError:
+                continue
+
+    def del_params(self, exclude: tuple = ()):
+        for name, m in self.named_modules():
+            try:
+                if isinstance(m, exclude):
+                    continue
+                del m._parameters["weight"]
+                print("Deleting parameter: {}".format(name + ".weight"))
+                setattr(m, "weight", Tensor([[1.0]]))
+                print("Intialized to type Tensor: {}".format(name + ".weight"))
+            except KeyError:
+                continue
+                # print("key error: {}".format(name))
+
+    def parameter_pop(self, exclude: tuple = ()) -> str:
+        """Delete weight or bias attribute and return attribute handle"""
+        attrs = [
+            ["self."] + module_attribute.rsplit(".", 1)
+            for module_attribute, _ in self.named_parameters(exclude=exclude)
+        ]
+        for a in attrs:
+            print(a)
+            obj = eval("".join(a[:-1]))
+            delattr(obj, a[-1])
+
     def parameters(
-        self, recurse: bool = True, exclude: tuple = (nn.BatchNorm2d)
+        self, recurse: bool = True, exclude: tuple = ()
     ) -> Iterator[Parameter]:
-        r"""Returns an iterator over module parameters.
-        This is typically passed to an optimizer.
-        Args:
-            recurse (bool): if True, then yields parameters of this module
-                and all submodules. Otherwise, yields only parameters that
-                are direct members of this module.
-        Yields:
-            Parameter: module parameter
-        Example::
-            >>> for param in model.parameters():
-            >>>     print(type(param), param.size())
-            <class 'torch.Tensor'> (20L,)
-            <class 'torch.Tensor'> (20L, 1L, 5L, 5L)
-        """
         for name, param in self.named_parameters(
             exclude=exclude, recurse=recurse
         ):
@@ -75,22 +103,8 @@ class FeatherNet(nn.Module):
         self,
         prefix: str = "",
         recurse: bool = True,
-        exclude: tuple = (nn.BatchNorm2d),
+        exclude: tuple = (),
     ) -> Iterator[Tuple[str, Tensor]]:
-        r"""Returns an iterator over module parameters, yielding both the
-        name of the parameter as well as the parameter itself.
-        Args:
-            prefix (str): prefix to prepend to all parameter names.
-            recurse (bool): if True, then yields parameters of this module
-                and all submodules. Otherwise, yields only parameters that
-                are direct members of this module.
-        Yields:
-            (string, Parameter): Tuple containing the name and parameter
-        Example::
-            >>> for name, param in self.named_parameters():
-            >>>    if name in ['bias']:
-            >>>        print(param.size())
-        """
         gen = self._named_members(
             lambda module: module._parameters.items(),
             prefix=prefix,
@@ -125,11 +139,28 @@ def main():
     my_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = ResNet(ResidualBlock, [2, 2, 2]).to(my_device)
     f_model = FeatherNet(model)
+    # [print(name) for name, v in f_model.named_parameters()]
+    # print(f_model.parameter_pop())
+    # [print(name) for name, v in f_model.named_parameters()]
+    # print(*list(filter(lambda x: not(isinstance(x, nn.BatchNorm2d)), f_model.modules())),sep='\n')
+    [print(name) for name, v in f_model.named_parameters()]
+    print("-" * 20)
+    #f_model.del_params()
+    #[print(name + '.weight') for name, m, in f_model.get_weights(exclude=(nn.BatchNorm2d))]
+    #[print(name + '.bias') for name, m, in f_model.get_bias()]
+    for name, weight in f_model.get_weights():
+        print(name + '.weight')
+        weight = Tensor([[1.0]])
+    for name, weight in f_model.get_weights():
+        print(weight)
+
+    exit()
 
     # print(*dict(model.named_parameters()).keys(), sep="\n")
     # print(*dict(f_model.named_parameters()).keys(), sep="\n")
-    print(*model.fc.named_parameters())
+
     del model.fc.weight
+
 
 if __name__ == "__main__":
     try:
