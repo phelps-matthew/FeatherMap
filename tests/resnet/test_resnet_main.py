@@ -116,8 +116,8 @@ class ResNet(nn.Module):
         return out
     
 base_model = ResNet(ResidualBlock, [2, 2, 2]).to(device)
-#model = FeatherNet(base_model, compress=0.25)
-model = base_model
+model = FeatherNet(base_model, exclude=(nn.BatchNorm2d), compress=0.25)
+#model = base_model
 
 # Loss and optimizer
 criterion = nn.CrossEntropyLoss()

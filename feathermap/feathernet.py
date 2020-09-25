@@ -69,6 +69,7 @@ class FeatherNet(nn.Module):
 
     def unregister_params(self) -> None:
         """Delete params, set attributes as Tensors of prior data"""
+        # fan_in will fail on BatchNorm2d.weight
         for name, module, kind in self.get_WandB_modules():
             try:
                 data = module._parameters[kind].data
