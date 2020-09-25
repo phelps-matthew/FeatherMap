@@ -2,20 +2,21 @@ import torch
 import torch.nn as nn
 import torchvision
 import torchvision.transforms as transforms
+from feathermap import feathernet
 
 
 # Device configuration
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-# Hyper-parameters 
+# Hyper-parameters
 input_size = 784
 hidden_size = 500
 num_classes = 10
-num_epochs = 5
+num_epochs = 1
 batch_size = 100
 learning_rate = 0.001
 
-# MNIST dataset 
+# MNIST dataset
 train_dataset = torchvision.datasets.MNIST(root='../../data', 
                                            train=True, 
                                            transform=transforms.ToTensor(),  
@@ -34,9 +35,6 @@ test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
                                           batch_size=batch_size, 
                                           shuffle=False)
 
-# fmt: off
-import ipdb,os; ipdb.set_trace(context=100)  # noqa
-# fmt: on
 # Fully connected neural network with one hidden layer
 class NeuralNet(nn.Module):
     def __init__(self, input_size, hidden_size, num_classes):
@@ -52,13 +50,10 @@ class NeuralNet(nn.Module):
         return out
 
 model = NeuralNet(input_size, hidden_size, num_classes).to(device)
-# fmt: off
-import ipdb,os; ipdb.set_trace(context=100)  # noqa
-# fmt: on
 
 # Loss and optimizer
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)  
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
 # Train the model
 total_step = len(train_loader)
