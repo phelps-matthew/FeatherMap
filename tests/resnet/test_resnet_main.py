@@ -115,8 +115,9 @@ class ResNet(nn.Module):
         out = self.fc(out)
         return out
     
-base_model = ResNet(ResidualBlock, [2, 2, 2]).to(device)
-model = FeatherNet(base_model, exclude=(nn.BatchNorm2d), compress=0.25)
+base_model = ResNet(ResidualBlock, [2, 2, 2])
+model = FeatherNet(base_model, exclude=(nn.BatchNorm2d), compress=1).to(device)
+
 #model = base_model
 
 # Loss and optimizer
