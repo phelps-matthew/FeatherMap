@@ -2,11 +2,16 @@
 - [X] Create iterator over params with nn.Module specific exclusion capability
 - [X] In `unregister_params`, need to initialize to proper tensor size
 - [X] Find global weight matrix dimensions
-- [ ] Establish initialization method
-- [ ] Test FFNN
-- [ ] test .to(device) and GPU enabling in FeatherNet
+- [X] Establish initialization method
+- [X] Test FFNN
+- [X] Git branching
+- [ ] argprase for jobs?
+- [ ] Recheck initialization method
+- [ ] Handle BatchNorm2d fan_in
+- [ ] Handle train() and eval() appropriately
+- [ ] Test ResNet
+- [/] test .to(device) and GPU enabling in FeatherNet
 - [ ] Setup AWS EC2 w/ GPU support
 	- S3 ?
-- [ ] Git branching
 - [ ] Setup Travis CI
 - [ ] Rename papers in ./references
