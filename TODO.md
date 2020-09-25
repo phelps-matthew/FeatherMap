@@ -2,6 +2,7 @@
 - [X] Create iterator over params with nn.Module specific exclusion capability
 - [X] In `unregister_params`, need to initialize to proper tensor size
 - [X] Find global weight matrix dimensions
+- [ ] Establish initialization method
 - [ ] Test FFNN
 - [ ] test .to(device) and GPU enabling in FeatherNet
 - [ ] Setup AWS EC2 w/ GPU support
