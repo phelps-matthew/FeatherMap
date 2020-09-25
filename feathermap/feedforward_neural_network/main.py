@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torchvision
 import torchvision.transforms as transforms
+from feathermap.feathernet import FeatherNet
 
 
 # Device configuration
@@ -48,10 +49,8 @@ class NeuralNet(nn.Module):
         out = self.fc2(out)
         return out
 
-model = NeuralNet(input_size, hidden_size, num_classes).to(device)
-# fmt: off
-import ipdb,os; ipdb.set_trace(context=100)  # noqa
-# fmt: on
+base_model = NeuralNet(input_size, hidden_size, num_classes)
+model = FeatherNet(base_model, compress=0.01).to(device)
 
 # Loss and optimizer
 criterion = nn.CrossEntropyLoss()
