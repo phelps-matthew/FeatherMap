@@ -13,7 +13,7 @@ input_size = 784
 hidden_size = 500
 num_classes = 10
 num_epochs = 1
-batch_size = 5
+batch_size = 100
 learning_rate = 0.001
 
 V_k = 0.987/784 + (1-0.987)/500
@@ -57,13 +57,10 @@ model = FeatherNet(base_model, compress=0.25)
 
 # Loss and optimizer
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)  
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
  
 # Train the model
 total_step = len(train_loader)
-# fmt: off
-import ipdb,os; ipdb.set_trace(context=30)  # noqa
-# fmt: on
 for epoch in range(num_epochs):
     for i, (images, labels) in enumerate(train_loader):  
         # Move tensors to the configured device
