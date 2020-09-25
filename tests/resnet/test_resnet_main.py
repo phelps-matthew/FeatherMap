@@ -17,7 +17,7 @@ from feathermap.feathernet import FeatherNet
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Hyper-parameters
-num_epochs = 80
+num_epochs = 1
 batch_size = 100
 learning_rate = 0.001
 
@@ -116,7 +116,8 @@ class ResNet(nn.Module):
         return out
     
 base_model = ResNet(ResidualBlock, [2, 2, 2]).to(device)
-model = FeatherNet(base_model, compress=0.25)
+#model = FeatherNet(base_model, compress=0.25)
+model = base_model
 
 # Loss and optimizer
 criterion = nn.CrossEntropyLoss()

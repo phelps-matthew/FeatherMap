@@ -29,10 +29,10 @@ class FeatherNet(nn.Module):
         self.norm_V()
 
     def norm_V(self):
-        k = sqrt(12) / 2 * self.size_m ** (-1 / 4)
-        torch.nn.init.uniform_(self.V1, -k, k)
-        torch.nn.init.uniform_(self.V2, -k, k)
-        # torch.nn.init.uniform_(self.V, -k, k)
+        # sigma = M**(-1/4); bound below follows for uniform dist.
+        bound = sqrt(12) / 2 * self.size_m ** (-1 / 4)
+        torch.nn.init.uniform_(self.V1, -bound, bound)
+        torch.nn.init.uniform_(self.V2, -bound, bound)
 
     def WandBtoV(self):
         self.V = torch.matmul(self.V1, self.V2)
@@ -41,8 +41,9 @@ class FeatherNet(nn.Module):
         for name, module, kind in self.get_WandB_modules():
             v = getattr(module, kind)
             j = v.numel()  # elements in weight or bias
-            v_new = V[i: i + j].reshape(v.size())
-            setattr(module, kind, v_new)
+            v_new = V[i : i + j].reshape(v.size())
+            scaler = getattr(module, kind + "_p")
+            setattr(module, kind, scaler*v_new)
             i += j
 
     def num_WandB(self) -> int:
@@ -71,13 +72,22 @@ class FeatherNet(nn.Module):
         for name, module, kind in self.get_WandB_modules():
             try:
                 data = module._parameters[kind].data
+                if kind == 'weight':
+                    fan_in = torch.nn.init._calculate_correct_fan(data, "fan_in")
+                else:
+                    fan_in = torch.nn.init._calculate_correct_fan(getattr(module, 'weight'), "fan_in")
                 del module._parameters[kind]
                 print(
                     "Parameter unregistered, assigned to type Tensor: {}".format(
                         name + "." + kind
                     )
                 )
+                scaler = 1 / sqrt(3 * fan_in)
                 setattr(module, kind, data)
+                # Add scale parameter to each weight or bias
+                module.register_parameter(
+                    kind + "_p", Parameter(torch.Tensor([scaler]))
+                )
             except KeyError:
                 print(
                     "{} is already registered as {}".format(

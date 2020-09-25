@@ -16,8 +16,6 @@ num_epochs = 1
 batch_size = 100
 learning_rate = 0.001
 
-V_k = 0.987/784 + (1-0.987)/500
-
 # MNIST dataset
 train_dataset = torchvision.datasets.MNIST(root='../../data', 
                                            train=True, 
@@ -53,11 +51,9 @@ class NeuralNet(nn.Module):
 
 
 base_model = NeuralNet(input_size, hidden_size, num_classes).to(device)
-model = FeatherNet(base_model, compress=0.25)
-a = [print(name) for name, v in model.get_WandB()]
-# fmt: off
-import ipdb,os; ipdb.set_trace(context=30)  # noqa
-# fmt: on
+#model = FeatherNet(base_model, compress=0.5)
+model = base_model
+#a = [print(name) for name, v in model.get_WandB()]
 
 # Loss and optimizer
 criterion = nn.CrossEntropyLoss()
