@@ -25,8 +25,8 @@ y_train = np.array([[1.7], [2.76], [2.09], [3.19], [1.694], [1.573],
 model = nn.Linear(input_size, output_size)
 
 inputs = torch.from_numpy(x_train)
-print(model(inputs))
-exit()
+print(model.weight)
+print(inputs)
 
 # Loss and optimizer
 criterion = nn.MSELoss()
@@ -58,4 +58,4 @@ plt.legend()
 plt.show()
 
 # Save the model checkpoint
-#torch.save(model.state_dict(), 'model.ckpt')
+torch.save(model.state_dict(), 'model.ckpt')
