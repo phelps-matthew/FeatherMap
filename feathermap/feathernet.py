@@ -8,7 +8,7 @@ from math import ceil, sqrt
 
 
 class FeatherNet(nn.Module):
-    """Implementation of structured multihashing for model compression"""
+    """Implementation of "Structured Multi-Hashing for Model Compression"""
 
     def __init__(
         self,
@@ -27,23 +27,23 @@ class FeatherNet(nn.Module):
         self.V2 = Parameter(torch.Tensor(self.size_m, self.size_n))
 
         self.norm_V()
-        #self.WandBtoV()
 
     def norm_V(self):
         k = sqrt(12) / 2 * self.size_m ** (-1 / 4)
         torch.nn.init.uniform_(self.V1, -k, k)
         torch.nn.init.uniform_(self.V2, -k, k)
-        #torch.nn.init.uniform_(self.V, -k, k)
+        # torch.nn.init.uniform_(self.V, -k, k)
 
     def WandBtoV(self):
         self.V = torch.matmul(self.V1, self.V2)
-        i = 0
         V = self.V.view(-1, 1)
-        for name, v in self.get_WandB():
-            v = v.view(-1, 1)
-            for j in range(len(v)):
-                v[j] = V[i]
-                i += 1
+        i = 0
+        for name, module, kind in self.get_WandB_modules():
+            v = getattr(module, kind)
+            j = v.numel()  # elements in weight or bias
+            v_new = V[i: i + j].reshape(v.size())
+            setattr(module, kind, v_new)
+            i += j
 
     def num_WandB(self) -> int:
         """Return total number of weights and biases"""

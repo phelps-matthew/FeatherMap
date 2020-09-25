@@ -54,6 +54,10 @@ class NeuralNet(nn.Module):
 
 base_model = NeuralNet(input_size, hidden_size, num_classes).to(device)
 model = FeatherNet(base_model, compress=0.25)
+a = [print(name) for name, v in model.get_WandB()]
+# fmt: off
+import ipdb,os; ipdb.set_trace(context=30)  # noqa
+# fmt: on
 
 # Loss and optimizer
 criterion = nn.CrossEntropyLoss()
