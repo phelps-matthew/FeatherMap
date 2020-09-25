@@ -11,7 +11,10 @@ class FeatherNet(nn.Module):
     """Implementation of structured multihashing for model compression"""
 
     def __init__(
-        self, module: nn.Module, compress: float = 1, exclude: tuple = ()
+        self,
+        module: nn.Module,
+        compress: float = 1,
+        exclude: tuple = (),
     ) -> None:
         super().__init__()
         self.module = module
@@ -20,12 +23,21 @@ class FeatherNet(nn.Module):
         self.unregister_params()
         self.size_n = ceil(sqrt(self.num_WandB()))
         self.size_m = ceil((self.compress * self.size_n) / 2)
-        self.V1 = Parameter(torch.randn(self.size_n, self.size_m))
-        self.V2 = Parameter(torch.randn(self.size_n, self.size_m))
-        self.V = torch.matmul(self.V1, self.V2.transpose(0, 1))
+        self.V1 = Parameter(torch.Tensor(self.size_n, self.size_m))
+        self.V2 = Parameter(torch.Tensor(self.size_m, self.size_n))
+
+        self.norm_V()
+        #self.WandBtoV()
+
+    def norm_V(self):
+        k = sqrt(12) / 2 * self.size_m ** (-1 / 4)
+        torch.nn.init.uniform_(self.V1, -k, k)
+        torch.nn.init.uniform_(self.V2, -k, k)
+        #torch.nn.init.uniform_(self.V, -k, k)
 
     def WandBtoV(self):
-        i, j = 0, 0
+        self.V = torch.matmul(self.V1, self.V2)
+        i = 0
         V = self.V.view(-1, 1)
         for name, v in self.get_WandB():
             v = v.view(-1, 1)
@@ -73,9 +85,9 @@ class FeatherNet(nn.Module):
                     )
                 )
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, *args):
         self.WandBtoV()
-        return self.module(x)
+        return self.module(*args)
 
 
 def main():
