@@ -8,10 +8,13 @@ from math import ceil, sqrt
 
 
 class FeatherNet(nn.Module):
-    """Implementation of structured multihashing for model compression"""
+    """Implementation of "Structured Multi-Hashing for Model Compression"""
 
     def __init__(
-        self, module: nn.Module, compress: float = 1, exclude: tuple = ()
+        self,
+        module: nn.Module,
+        compress: float = 1,
+        exclude: tuple = (),
     ) -> None:
         super().__init__()
         self.module = module
@@ -20,18 +23,28 @@ class FeatherNet(nn.Module):
         self.unregister_params()
         self.size_n = ceil(sqrt(self.num_WandB()))
         self.size_m = ceil((self.compress * self.size_n) / 2)
-        self.V1 = Parameter(torch.randn(self.size_n, self.size_m))
-        self.V2 = Parameter(torch.randn(self.size_n, self.size_m))
-        self.V = torch.matmul(self.V1, self.V2.transpose(0, 1))
+        self.V1 = Parameter(torch.Tensor(self.size_n, self.size_m))
+        self.V2 = Parameter(torch.Tensor(self.size_m, self.size_n))
+
+        self.norm_V()
+
+    def norm_V(self):
+        # sigma = M**(-1/4); bound below follows for uniform dist.
+        bound = sqrt(12) / 2 * self.size_m ** (-1 / 4)
+        torch.nn.init.uniform_(self.V1, -bound, bound)
+        torch.nn.init.uniform_(self.V2, -bound, bound)
 
     def WandBtoV(self):
-        i, j = 0, 0
+        self.V = torch.matmul(self.V1, self.V2)
         V = self.V.view(-1, 1)
-        for name, v in self.get_WandB():
-            v = v.view(-1, 1)
-            for j in range(len(v)):
-                v[j] = V[i]
-                i += 1
+        i = 0
+        for name, module, kind in self.get_WandB_modules():
+            v = getattr(module, kind)
+            j = v.numel()  # elements in weight or bias
+            v_new = V[i : i + j].reshape(v.size())
+            scaler = getattr(module, kind + "_p")
+            setattr(module, kind, scaler*v_new)
+            i += j
 
     def num_WandB(self) -> int:
         """Return total number of weights and biases"""
@@ -56,16 +69,26 @@ class FeatherNet(nn.Module):
 
     def unregister_params(self) -> None:
         """Delete params, set attributes as Tensors of prior data"""
+        # fan_in will fail on BatchNorm2d.weight
         for name, module, kind in self.get_WandB_modules():
             try:
                 data = module._parameters[kind].data
+                if kind == 'weight':
+                    fan_in = torch.nn.init._calculate_correct_fan(data, "fan_in")
+                else:
+                    fan_in = torch.nn.init._calculate_correct_fan(getattr(module, 'weight'), "fan_in")
                 del module._parameters[kind]
                 print(
                     "Parameter unregistered, assigned to type Tensor: {}".format(
                         name + "." + kind
                     )
                 )
+                scaler = 1 / sqrt(3 * fan_in)
                 setattr(module, kind, data)
+                # Add scale parameter to each weight or bias
+                module.register_parameter(
+                    kind + "_p", Parameter(torch.Tensor([scaler]))
+                )
             except KeyError:
                 print(
                     "{} is already registered as {}".format(
@@ -73,9 +96,9 @@ class FeatherNet(nn.Module):
                     )
                 )
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, *args):
         self.WandBtoV()
-        return self.module(x)
+        return self.module(*args)
 
 
 def main():

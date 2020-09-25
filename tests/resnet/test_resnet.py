@@ -10,9 +10,7 @@ import torch
 import torch.nn as nn
 import torchvision
 import torchvision.transforms as transforms
-import pprint
-
-pp = pprint.PrettyPrinter(indent=4)
+from feathermap.feathernet import FeatherNet
 
 # Device configuration
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -84,3 +82,8 @@ class ResNet(nn.Module):
         out = out.view(out.size(0), -1)
         out = self.fc(out)
         return out
+
+
+base_model = ResNet(ResidualBlock, [2, 2, 2]).to(device)
+model = FeatherNet(base_model, exclude=(nn.BatchNorm2d), compress=0.25)
+a = [print(name +'.'+kind, type(module)) for name, module, kind in model.get_WandB_modules()]

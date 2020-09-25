@@ -10,15 +10,14 @@ import torch
 import torch.nn as nn
 import torchvision
 import torchvision.transforms as transforms
-import pprint
+from feathermap.feathernet import FeatherNet
 
-pp = pprint.PrettyPrinter(indent=4)
 
 # Device configuration
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Hyper-parameters
-num_epochs = 80
+num_epochs = 1
 batch_size = 100
 learning_rate = 0.001
 
@@ -116,44 +115,10 @@ class ResNet(nn.Module):
         out = self.fc(out)
         return out
     
-model = ResNet(ResidualBlock, [2, 2, 2]).to(device)
-#pp.pprint(list(dict(model.named_parameters()).keys()))
-#pp.pprint(list(dict(model.named_modules()).keys()))
-#pp.pprint(type(dict(model.named_modules())['layer1.0.bn2']))
+base_model = ResNet(ResidualBlock, [2, 2, 2])
+model = FeatherNet(base_model, exclude=(nn.BatchNorm2d), compress=1).to(device)
 
-p_names = dict(model.named_parameters())
-m_names = dict(model.named_modules())
-#for p in p_names:
-#    print(p)
-#print('\n')
-#for k,v in m_names.items():
-#    print(k, type(v))
-#print('\n')
-pp.pprint(list(dict(model.named_parameters()).keys()))
-
-# parameters(named_parameters(self._named_members(self.named_modules(self.named_modules))))
-
-def named_type(mod, prefix: str = '', recurse: bool = True):
-        gen = mod._named_members(
-            lambda module: module._parameters.items(),
-            prefix='', recurse=True)
-        for elem in gen:
-            yield elem
-#--------------------------------------------------
-def _named_members(mod, get_members_fn, prefix='', recurse=True):
-    """Helper method for yielding various names + members of modules."""
-    memo = set()
-    modules = mod.named_modules(prefix=prefix) if recurse else [(prefix, mod)]
-    for module_prefix, module in modules:
-        members = get_members_fn(module)
-        for k, v in members:
-            if v is None or v in memo:
-                continue
-            memo.add(v)
-            name = module_prefix + ('.' if module_prefix else '') + k
-            yield name, v
-
-exit()
+#model = base_model
 
 # Loss and optimizer
 criterion = nn.CrossEntropyLoss()
