@@ -5,10 +5,10 @@
 - [X] Establish initialization method
 - [X] Test FFNN
 - [X] Git branching
-- [ ] argprase for jobs?
 - [ ] Recheck initialization method
 - [ ] Handle BatchNorm2d fan_in
 - [ ] Handle train() and eval() appropriately
+- [ ] argprase for jobs?
 - [ ] Test ResNet
 - [/] test .to(device) and GPU enabling in FeatherNet
 - [ ] Setup AWS EC2 w/ GPU support

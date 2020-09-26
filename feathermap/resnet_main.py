@@ -10,7 +10,8 @@ import torch
 import torch.nn as nn
 import torchvision
 import torchvision.transforms as transforms
-from src.resnet import ResidualBlock, ResNet
+from feathermap.resnet import ResidualBlock, ResNet
+from feathermap.feathernet import FeatherNet
 
 # Device configuration
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -32,11 +33,11 @@ transform = transforms.Compose(
 
 # CIFAR-10 dataset
 train_dataset = torchvision.datasets.CIFAR10(
-    root="../../data/", train=True, transform=transform, download=True
+    root="./data/", train=True, transform=transform, download=True
 )
 
 test_dataset = torchvision.datasets.CIFAR10(
-    root="../../data/", train=False, transform=transforms.ToTensor()
+    root="./data/", train=False, transform=transforms.ToTensor()
 )
 
 # Data loader
@@ -61,7 +62,8 @@ def conv3x3(in_channels, out_channels, stride=1):
     )
 
 
-model = ResNet(ResidualBlock, [2, 2, 2]).to(device)
+base_model = ResNet(ResidualBlock, [2, 2, 2]).to(device)
+model = FeatherNet(base_model, exclude=(nn.BatchNorm2d), compress=0.25)
 
 # Loss and optimizer
 criterion = nn.CrossEntropyLoss()
@@ -123,4 +125,4 @@ with torch.no_grad():
     )
 
 # Save the model checkpoint
-torch.save(model.state_dict(), "resnet.ckpt")
+#torch.save(model.state_dict(), "resnet.ckpt")
