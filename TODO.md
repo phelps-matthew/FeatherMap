@@ -17,5 +17,5 @@
 - [ ] Compare timings of training and evaluation vs compression
 - [ ] S3 ?
 - [ ] Setup Travis CI
-- [ ] Rename papers in ./references
+- [X] Rename papers in ./references
 - [ ] Analyze residual blocks
