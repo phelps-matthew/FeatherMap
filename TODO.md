@@ -7,7 +7,7 @@
 - [X] Git branching
 - [X] Recheck initialization method
 - [X] Handle BatchNorm2d fan_in
-- [ ] Handle train() and eval() appropriately
+- [X] Handle train() and eval() appropriately
 - [ ] argprase for jobs?
 - [ ] Test ResNet
 - [/] test .to(device) and GPU enabling in FeatherNet
