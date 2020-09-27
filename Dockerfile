@@ -2,11 +2,10 @@
 FROM python:3.8
 
 # copy FeatherMap package into container
-COPY setup.py /tmp/
-COPY feathermap /tmp/feathermap
+COPY setup.py .
+COPY feathermap ./feathermap
 
 # install feathermap package
-WORKDIR /tmp
 RUN pip3 install -e .
 
 # command to run on container start
