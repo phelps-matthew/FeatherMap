@@ -33,11 +33,10 @@ class FeatherNet(nn.Module):
 
         # Noramlize V1 and V2
         self.norm_V()
-        self.WandBtoV()
 
     def norm_V(self):
         """Currently implemented only for uniform intializations"""
-        # sigma = M**(-1/4); bound below follows for uniform dist.
+        # sigma = M**(-1/4); bound follows from uniform dist.
         bound = sqrt(12) / 2 * (self.size_m ** (-1 / 4))
         torch.nn.init.uniform_(self.V1, -bound, bound)
         torch.nn.init.uniform_(self.V2, -bound, bound)
@@ -54,7 +53,7 @@ class FeatherNet(nn.Module):
 
             # Scaler Parameter, e.g. nn.Linear.weight_p
             scaler = getattr(module, kind + "_p")
-            # Update weights and biases, point towards elems in V
+            # Update weights and biases, point to elems in V
             setattr(module, kind, scaler * v_new)
             i += j
 
