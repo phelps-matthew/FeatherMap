@@ -9,9 +9,10 @@ setup(
         "torchvision",
         "numpy",
         "pandas",
+        "matplotlib",
+        "streamlit"
         # "pathlib",
         # "sklearn",
-        "matplotlib",
         # "ipython",
         # "ipdb",
     ],
