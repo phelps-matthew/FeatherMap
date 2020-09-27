@@ -5,6 +5,7 @@ import torchvision.transforms as transforms
 from feathermap.feathernet import FeatherNet
 from feathermap.ffnn import FFNN
 import argparse
+from feathermap.utils.timer import timed
 
 
 def parse_arguments():
@@ -61,6 +62,7 @@ def load_data(batch_size, **kwargs):
     return train_loader, test_loader
 
 
+@timed
 def train(model, train_loader, epochs, lr, device):
     model.train()
     # Loss and optimizer
@@ -92,6 +94,7 @@ def train(model, train_loader, epochs, lr, device):
                 )
 
 
+@timed
 def evaluate(model, test_loader, device):
     model.eval()
     with torch.no_grad():
@@ -110,6 +113,7 @@ def evaluate(model, test_loader, device):
         return accuracy
 
 
+@timed
 def main():
     args = parse_arguments()
 
