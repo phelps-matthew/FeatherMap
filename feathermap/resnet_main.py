@@ -24,6 +24,12 @@ def parse_arguments():
     parser.add_argument("--batch-size", type=int, default=100, help="Mini-batch size")
     parser.add_argument("--lr", type=float, default=0.001, help="Learning rate at t=0")
     parser.add_argument(
+        "--num-workers",
+        type=int,
+        default=1,
+        help="Number of dataloader processing threads. Try adjusting for faster training",
+    )
+    parser.add_argument(
         "--compress",
         type=float,
         default=0.5,
@@ -41,7 +47,7 @@ def parse_arguments():
     return args
 
 
-def load_data(batch_size):
+def load_data(batch_size, **kwargs):
     # Image preprocessing modules
     transform = transforms.Compose(
         [
@@ -54,7 +60,7 @@ def load_data(batch_size):
 
     # CIFAR-10 dataset
     train_dataset = torchvision.datasets.CIFAR10(
-        root="./data/", train=True, transform=transform, download=True
+        root="./data/", train=True, transform=transform, download=True, **kwargs
     )
 
     test_dataset = torchvision.datasets.CIFAR10(
@@ -63,11 +69,11 @@ def load_data(batch_size):
 
     # Data loader
     train_loader = torch.utils.data.DataLoader(
-        dataset=train_dataset, batch_size=batch_size, shuffle=True
+        dataset=train_dataset, batch_size=batch_size, shuffle=True, **kwargs
     )
 
     test_loader = torch.utils.data.DataLoader(
-        dataset=test_dataset, batch_size=batch_size, shuffle=False
+        dataset=test_dataset, batch_size=batch_size, shuffle=False, **kwargs
     )
     return train_loader, test_loader
 
@@ -138,6 +144,11 @@ def main():
 
     # Device configuration
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    kwargs = (
+        {"num_workers": args.num_workers, "pin_memory": True}
+        if torch.cuda.is_available
+        else {}
+    )
 
     # Select model
     base_model = ResNet(ResidualBlock, [2, 2, 2])
@@ -147,7 +158,7 @@ def main():
         model = base_model.to(device)
 
     # Load data
-    train_loader, test_loader = load_data(args.batch_size)
+    train_loader, test_loader = load_data(args.batch_size, **kwargs)
 
     # Train, evaluate
     train(model, train_loader, args.epochs, args.lr, device)
