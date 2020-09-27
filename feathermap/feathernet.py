@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 from torch.nn import Parameter
-from feathermap.resnet import ResNet, ResidualBlock
 from torch import Tensor
 from typing import Iterator, Tuple
 from math import ceil, sqrt
@@ -18,6 +17,7 @@ class FeatherNet(nn.Module):
         self.module = copy.deepcopy(module) if clone else module
         self.compress = compress
         self.exclude = exclude
+        self.trained = False
 
         # Unregister module Parameters, create scaler attributes
         self.unregister_params()
@@ -29,11 +29,10 @@ class FeatherNet(nn.Module):
 
         # Noramlize V1 and V2
         self.norm_V()
-
-        # Compute V = V1*V2^T; Point weights and biases to elems in V
         self.WandBtoV()
 
     def norm_V(self):
+        """Currently implemented only for uniform intializations"""
         # sigma = M**(-1/4); bound below follows for uniform dist.
         bound = sqrt(12) / 2 * (self.size_m ** (-1 / 4))
         torch.nn.init.uniform_(self.V1, -bound, bound)
@@ -47,7 +46,7 @@ class FeatherNet(nn.Module):
         for name, module, kind in self.get_WandB_modules():
             v = getattr(module, kind)
             j = v.numel()  # elements in weight or bias
-            v_new = V[i : i + j].reshape(v.size())  # contiguous slicing confirmed
+            v_new = V[i : i + j].reshape(v.size())  # confirmed contiguous
 
             # Scaler Parameter, e.g. nn.Linear.weight_p
             scaler = getattr(module, kind + "_p")
@@ -77,7 +76,8 @@ class FeatherNet(nn.Module):
                 pass
 
     def unregister_params(self) -> None:
-        """Delete params, set attributes as Tensors of prior data"""
+        """Delete params, set attributes as Tensors of prior data,
+        register scaler params"""
         # fan_in will fail on BatchNorm2d.weight
         for name, module, kind in self.get_WandB_modules():
             try:
@@ -115,9 +115,15 @@ class FeatherNet(nn.Module):
                 raise TypeError
 
     def load_state_dict(self, *args, **kwargs):
+        """Update weights and biases from stored V1, V2 values"""
         out = nn.Module.load_state_dict(self, *args, *kwargs)
         self.WandBtoV()
         return out
+
+    def eval(self, *args, **kwargs):
+        """Update weights and biases from final-most batch after training"""
+        self.WandBtoV()
+        return nn.Module.eval(self, *args, **kwargs)
 
     def forward(self, *args, **kwargs):
         if self.training:
@@ -126,6 +132,8 @@ class FeatherNet(nn.Module):
 
 
 def main():
+    from feathermap.resnet import ResNet, ResidualBlock
+
     # Device configuration
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
