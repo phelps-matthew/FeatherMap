@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import torchvision
 import torchvision.transforms as transforms
-from feathermap.feathernet import FeatherNet
-from feathermap.ffnn import FFNN
+from feathermap.models.feathernet import FeatherNet
+from feathermap.models.ffnn import FFNN
 import argparse
 from feathermap.utils.timer import timed
 
