@@ -9,7 +9,8 @@ import argparse
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
-        description="MNIST FFNN", formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        description="MNIST FFNN with SMH compression",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument("--hidden-size", type=int, default=500, help="Hidden size")
     parser.add_argument("--epochs", type=int, default=5, help="Number of epochs")
@@ -27,15 +28,6 @@ def parse_arguments():
         default=False,
         help="Save model in local directory",
     )
-    parser.add_argument(
-        "--no-cuda", action="store_true", default=False, help="disables CUDA training"
-    )
-    parser.add_argument(
-        "--save-model",
-        action="store_true",
-        default=False,
-        help="For Saving the current Model",
-    )
     args = parser.parse_args()
 
     print(args)
@@ -45,11 +37,11 @@ def parse_arguments():
 def load_data(batch_size):
     # MNIST dataset
     train_dataset = torchvision.datasets.MNIST(
-        root="../../data", train=True, transform=transforms.ToTensor(), download=True
+        root="./data", train=True, transform=transforms.ToTensor(), download=True
     )
 
     test_dataset = torchvision.datasets.MNIST(
-        root="../../data", train=False, transform=transforms.ToTensor()
+        root="./data", train=False, transform=transforms.ToTensor()
     )
 
     # Data loader
@@ -135,7 +127,7 @@ def main():
     evaluate(model, test_loader, device)
 
     # Save the model checkpoint
-    if args.model_save:
+    if args.save_model:
         torch.save(model.state_dict(), "model.ckpt")
 
 

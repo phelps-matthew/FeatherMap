@@ -125,4 +125,4 @@ with torch.no_grad():
     )
 
 # Save the model checkpoint
-#torch.save(model.state_dict(), "resnet.ckpt")
+torch.save(model.state_dict(), "resnet.ckpt")
