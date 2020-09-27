@@ -6,12 +6,16 @@
 - [X] Test FFNN
 - [X] Git branching
 - [X] Recheck initialization method
-- [X] Handle BatchNorm2d fan_in
+- [X] Handle BatchNorm2d `fan_in`
 - [X] Handle train() and eval() appropriately
-- [ ] argprase for jobs?
-- [ ] Test ResNet
-- [/] test .to(device) and GPU enabling in FeatherNet
-- [ ] Setup AWS EC2 w/ GPU support
-	- S3 ?
+- [X] argprase for jobs?
+- [X] Test ResNet
+- [ ] Docker containerization locally
+- [ ] Docker on EC2 (no GPU)
+- [ ] Docker on EC2 (GPU)
+- [ ] Find best `num_workers`
+- [ ] Compare timings of training and evaluation vs compression
+- [ ] S3 ?
 - [ ] Setup Travis CI
 - [ ] Rename papers in ./references
+- [ ] Analyze residual blocks
