@@ -11,7 +11,11 @@ class FeatherNet(nn.Module):
     """Implementation of "Structured Multi-Hashing for Model Compression"""
 
     def __init__(
-        self, module: nn.Module, compress: float = 1, exclude: tuple = (), clone=True
+        self,
+        module: nn.Module,
+        compress: float = 1,
+        exclude: tuple = (),
+        clone: bool = True,
     ) -> None:
         super().__init__()
         self.module = copy.deepcopy(module) if clone else module
