@@ -5,8 +5,8 @@
 - [X] Establish initialization method
 - [X] Test FFNN
 - [X] Git branching
-- [ ] Recheck initialization method
-- [ ] Handle BatchNorm2d fan_in
+- [X] Recheck initialization method
+- [X] Handle BatchNorm2d fan_in
 - [ ] Handle train() and eval() appropriately
 - [ ] argprase for jobs?
 - [ ] Test ResNet
