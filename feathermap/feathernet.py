@@ -21,7 +21,6 @@ class FeatherNet(nn.Module):
         self.module = copy.deepcopy(module) if clone else module
         self.compress = compress
         self.exclude = exclude
-        self.trained = False
 
         # Unregister module Parameters, create scaler attributes
         self.unregister_params()
@@ -93,16 +92,16 @@ class FeatherNet(nn.Module):
                         getattr(module, "weight"), "fan_in"
                     )
                 del module._parameters[kind]
-                print(
-                    "Parameter unregistered, assigned to type Tensor: {}".format(
-                        name + "." + kind
-                    )
-                )
                 scaler = 1 / sqrt(3 * fan_in)
                 setattr(module, kind, data)
                 # Add scale parameter to each weight or bias
                 module.register_parameter(
                     kind + "_p", Parameter(torch.Tensor([scaler]))
+                )
+                print(
+                    "Parameter unregistered, assigned to type Tensor: {}".format(
+                        name + "." + kind
+                    )
                 )
             except KeyError:
                 print(
