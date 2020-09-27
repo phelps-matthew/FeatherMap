@@ -20,30 +20,41 @@ class FeatherNet(nn.Module):
         self.module = module
         self.compress = compress
         self.exclude = exclude
+
+        # Unregister module Parameters, create scaler attributes
         self.unregister_params()
+
         self.size_n = ceil(sqrt(self.num_WandB()))
         self.size_m = ceil((self.compress * self.size_n) / 2)
         self.V1 = Parameter(torch.Tensor(self.size_n, self.size_m))
         self.V2 = Parameter(torch.Tensor(self.size_m, self.size_n))
 
+        # Noramlize V1 and V2
         self.norm_V()
+
+        # Compute V = V1*V2^T; Point weights and biases to elems in V
+        self.WandBtoV()
 
     def norm_V(self):
         # sigma = M**(-1/4); bound below follows for uniform dist.
-        bound = sqrt(12) / 2 * self.size_m ** (-1 / 4)
+        bound = sqrt(12) / 2 * (self.size_m ** (-1 / 4))
         torch.nn.init.uniform_(self.V1, -bound, bound)
         torch.nn.init.uniform_(self.V2, -bound, bound)
 
     def WandBtoV(self):
+        """Needs to be efficient"""
         self.V = torch.matmul(self.V1, self.V2)
-        V = self.V.view(-1, 1)
+        V = self.V.view(-1, 1)  # V.is_contiguous() = True
         i = 0
         for name, module, kind in self.get_WandB_modules():
             v = getattr(module, kind)
             j = v.numel()  # elements in weight or bias
-            v_new = V[i : i + j].reshape(v.size())
+            v_new = V[i: i + j].reshape(v.size())  # contiguous slicing confirmed
+
+            # Scaler Parameter, e.g. nn.Linear.weight_p
             scaler = getattr(module, kind + "_p")
-            setattr(module, kind, scaler*v_new)
+            # Update weights and biases, point towards elems in V
+            setattr(module, kind, scaler * v_new)
             i += j
 
     def num_WandB(self) -> int:
@@ -73,10 +84,13 @@ class FeatherNet(nn.Module):
         for name, module, kind in self.get_WandB_modules():
             try:
                 data = module._parameters[kind].data
-                if kind == 'weight':
+                if kind == "weight":
                     fan_in = torch.nn.init._calculate_correct_fan(data, "fan_in")
+                # get bias fan_in from corresponding weight
                 else:
-                    fan_in = torch.nn.init._calculate_correct_fan(getattr(module, 'weight'), "fan_in")
+                    fan_in = torch.nn.init._calculate_correct_fan(
+                        getattr(module, "weight"), "fan_in"
+                    )
                 del module._parameters[kind]
                 print(
                     "Parameter unregistered, assigned to type Tensor: {}".format(
@@ -95,9 +109,16 @@ class FeatherNet(nn.Module):
                         name + "." + kind, type(getattr(module, kind))
                     )
                 )
+            except ValueError:
+                print(
+                    "Check module exclusion list. Note, cannot calculate fan_in\
+                    for BatchNorm2d layers."
+                )
+                raise TypeError
 
     def forward(self, *args):
-        self.WandBtoV()
+        if self.training:
+            self.WandBtoV()
         return self.module(*args)
 
 
