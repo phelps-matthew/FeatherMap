@@ -5,19 +5,17 @@ from feathermap.resnet import ResNet, ResidualBlock
 from torch import Tensor
 from typing import Iterator, Tuple
 from math import ceil, sqrt
+import copy
 
 
 class FeatherNet(nn.Module):
     """Implementation of "Structured Multi-Hashing for Model Compression"""
 
     def __init__(
-        self,
-        module: nn.Module,
-        compress: float = 1,
-        exclude: tuple = (),
+        self, module: nn.Module, compress: float = 1, exclude: tuple = (), clone=True
     ) -> None:
         super().__init__()
-        self.module = module
+        self.module = copy.deepcopy(module) if clone else module
         self.compress = compress
         self.exclude = exclude
 
@@ -49,7 +47,7 @@ class FeatherNet(nn.Module):
         for name, module, kind in self.get_WandB_modules():
             v = getattr(module, kind)
             j = v.numel()  # elements in weight or bias
-            v_new = V[i: i + j].reshape(v.size())  # contiguous slicing confirmed
+            v_new = V[i : i + j].reshape(v.size())  # contiguous slicing confirmed
 
             # Scaler Parameter, e.g. nn.Linear.weight_p
             scaler = getattr(module, kind + "_p")
@@ -116,10 +114,15 @@ class FeatherNet(nn.Module):
                 )
                 raise TypeError
 
-    def forward(self, *args):
+    def load_state_dict(self, *args, **kwargs):
+        out = nn.Module.load_state_dict(self, *args, *kwargs)
+        self.WandBtoV()
+        return out
+
+    def forward(self, *args, **kwargs):
         if self.training:
             self.WandBtoV()
-        return self.module(*args)
+        return self.module(*args, **kwargs)
 
 
 def main():
@@ -138,15 +141,24 @@ def main():
 
     def res_test():
         rmodel = ResNet(ResidualBlock, [2, 2, 2]).to(device)
-        frmodel = FeatherNet(rmodel).to(device)
-        print(frmodel.num_WandB(), frmodel.size_n, frmodel.size_m)
-        print("V1: {}".format(frmodel.V1))
-        print("V2: {}".format(frmodel.V2))
-        print("V: {}".format(frmodel.V))
-        frmodel.WandBtoV()
-        [print(name, v) for name, v in frmodel.named_parameters()]
+        frmodel = FeatherNet(rmodel, exclude=(nn.BatchNorm2d), compress=0.5).to(device)
+        # print(frmodel.num_WandB(), frmodel.size_n, frmodel.size_m)
+        # print("V1: {}".format(frmodel.V1))
+        # print("V2: {}".format(frmodel.V2))
+        # print("V: {}".format(frmodel.V))
+        # frmodel.WandBtoV()
+        for name, mod, kind in frmodel.get_WandB_modules():
+            # print(name + "." + kind)
+            pass
+        for name, param in rmodel.named_parameters():
+            print(name)
+        for name, param in frmodel.named_parameters():
+            print(name)
+        # Compare compressed sizes; confirmed.
+        torch.save(frmodel.state_dict(), "feather.ckpt")
+        torch.save(rmodel.state_dict(), "resnet.ckpt")
 
-    linear_test()
+    res_test()
 
 
 if __name__ == "__main__":
