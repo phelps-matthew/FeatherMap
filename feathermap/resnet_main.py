@@ -13,6 +13,7 @@ import torchvision.transforms as transforms
 from feathermap.resnet import ResidualBlock, ResNet
 from feathermap.feathernet import FeatherNet
 import argparse
+from feathermap.utils.timer import timed
 
 
 def parse_arguments():
@@ -78,6 +79,7 @@ def load_data(batch_size, **kwargs):
     return train_loader, test_loader
 
 
+@timed
 def train(model, train_loader, epochs, lr, device):
     model.train()
     # Loss and optimizer
@@ -119,6 +121,7 @@ def train(model, train_loader, epochs, lr, device):
             update_lr(optimizer, curr_lr)
 
 
+@timed
 def evaluate(model, test_loader, device):
     # Test the model
     model.eval()
@@ -139,6 +142,7 @@ def evaluate(model, test_loader, device):
         return accuracy
 
 
+@timed
 def main():
     args = parse_arguments()
 
