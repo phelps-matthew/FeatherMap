@@ -56,6 +56,7 @@ def load_data(batch_size):
 
 
 def train(model, train_loader, epochs, lr, device):
+    model.train()
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
