@@ -128,7 +128,7 @@ def main():
 
     # Save the model checkpoint
     if args.save_model:
-        torch.save(model.state_dict(), "model.ckpt")
+        torch.save(model.state_dict(), "ffnn.ckpt")
 
 
 if __name__ == "__main__":
