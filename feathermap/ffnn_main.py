@@ -9,7 +9,7 @@ import argparse
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
-        description="MNIST FFNN with SMH compression",
+        description="FFNN on MNIST with Structured Multi-Hashing compression",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument("--hidden-size", type=int, default=500, help="Hidden size")
@@ -86,6 +86,7 @@ def train(model, train_loader, epochs, lr, device):
 
 
 def evaluate(model, test_loader, device):
+    model.eval()
     with torch.no_grad():
         correct = 0
         total = 0
