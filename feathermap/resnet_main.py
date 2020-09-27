@@ -10,8 +10,8 @@ import torch
 import torch.nn as nn
 import torchvision
 import torchvision.transforms as transforms
-from feathermap.resnet import ResidualBlock, ResNet
-from feathermap.feathernet import FeatherNet
+from feathermap.models.resnet import ResidualBlock, ResNet
+from feathermap.models.feathernet import FeatherNet
 import argparse
 from feathermap.utils.timer import timed
 
