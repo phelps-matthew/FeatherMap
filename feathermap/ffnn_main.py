@@ -4,7 +4,7 @@ import torchvision
 import torchvision.transforms as transforms
 from feathermap.models.feathernet import FeatherNet
 from feathermap.models.ffnn import FFNN, parse_arguments
-from feathermap.utils.timer import timed, print_gpu_status
+from feathermap.utils import timed, print_gpu_status
 
 
 def load_data(batch_size, **kwargs):
