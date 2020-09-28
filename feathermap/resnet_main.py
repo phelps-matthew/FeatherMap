@@ -12,7 +12,7 @@ import torchvision
 import torchvision.transforms as transforms
 from feathermap.models.resnet import ResidualBlock, ResNet, parse_arguments
 from feathermap.models.feathernet import FeatherNet
-from feathermap.utils.timer import timed
+from feathermap.utils.timer import timed, print_gpu_status
 
 
 def load_data(batch_size, **kwargs):
@@ -113,8 +113,10 @@ def evaluate(model, test_loader, device):
 def main():
     args = parse_arguments()
 
+    # Enable GPU support
+    DEV = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print_gpu_status()
     # Device configuration
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     kwargs = (
         {"num_workers": args.num_workers, "pin_memory": True}
         if torch.cuda.is_available()
@@ -126,14 +128,14 @@ def main():
     if args.compress:
         model = FeatherNet(base_model, exclude=(nn.BatchNorm2d), compress=args.compress)
     else:
-        model = base_model.to(device)
+        model = base_model.to(DEV)
 
     # Load data
     train_loader, test_loader = load_data(args.batch_size, **kwargs)
 
     # Train, evaluate
-    train(model, train_loader, args.epochs, args.lr, device)
-    evaluate(model, test_loader, device)
+    train(model, train_loader, args.epochs, args.lr, DEV)
+    evaluate(model, test_loader, DEV)
 
     # Save the model checkpoint
     if args.save_model:
