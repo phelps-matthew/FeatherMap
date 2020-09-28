@@ -139,7 +139,7 @@ def main():
 
     # Save the model checkpoint
     if args.save_model:
-        torch.save(model.state_dict(), "resnet.ckpt")
+        torch.save(model.state_dict(), "ffnn_compress_" + str(args.compress) + ".ckpt")
 
 
 if __name__ == "__main__":
