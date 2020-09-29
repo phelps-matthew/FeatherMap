@@ -13,11 +13,11 @@ curl -fLo ~/.local/share/nvim/site/autoload/plug.vim --create-dirs https://raw.g
 git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
 tmux source ~/.tmux.conf
 
-# download project
-git clone https://github.com/phelps-matthew/FeatherMap.git
-cd ./FeatherMap/
-pip install -e .
 # start a new window
 tmux new-session -t aws-tmx
 
 # nvim 	:PlugInstall && :set background=dark #for gruvbox
+# download project
+#git clone https://github.com/phelps-matthew/FeatherMap.git
+#cd ./FeatherMap/
+#pip install -e .

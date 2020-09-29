@@ -10,7 +10,8 @@
 - [X] Handle train() and eval() appropriately
 - [X] argprase for jobs?
 - [X] Test ResNet
-- [ ] Docker containerization locally
+- [X] Docker containerization locally
+- [ ] Add logging for training times and accuracy
 - [ ] Docker on EC2 (no GPU)
 - [ ] Docker on EC2 (GPU)
 - [ ] Find best `num_workers`
