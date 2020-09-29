@@ -83,7 +83,7 @@ def evaluate(model, test_loader, device):
 @timed
 def main():
     # Initialize logger
-    set_logger("logs/ffnn_main_compress_" + str(args.compress) ".log")
+    set_logger("logs/ffnn_main_compress_" + str(args.compress) + ".log")
 
     args = parse_arguments()
 
