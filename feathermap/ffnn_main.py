@@ -82,10 +82,10 @@ def evaluate(model, test_loader, device):
 
 @timed
 def main():
-    # Initialize logger
-    set_logger("ffnn_main.log")
-
     args = parse_arguments()
+
+    # Initialize logger
+    set_logger("ffnn_main_" + str(args.compress) + ".log")
 
     # Enable GPU support
     DEV = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
