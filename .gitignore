@@ -2,7 +2,7 @@
 data/
 FeathetMap/feathermap/data/
 feathermap/data/
-*.log
+#*.log
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
