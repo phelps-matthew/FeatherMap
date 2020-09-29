@@ -1,11 +1,11 @@
-[2020-09-29 15:53:53,791] INFO - Some torch.cuda functionality unavailable
-[2020-09-29 15:53:55,497] INFO - Epoch [1/1], Step [100/600], Loss: 0.3894
-[2020-09-29 15:53:57,163] INFO - Epoch [1/1], Step [200/600], Loss: 0.2664
-[2020-09-29 15:53:58,833] INFO - Epoch [1/1], Step [300/600], Loss: 0.2474
-[2020-09-29 15:54:00,517] INFO - Epoch [1/1], Step [400/600], Loss: 0.1512
-[2020-09-29 15:54:02,240] INFO - Epoch [1/1], Step [500/600], Loss: 0.1487
-[2020-09-29 15:54:03,945] INFO - Epoch [1/1], Step [600/600], Loss: 0.2916
-[2020-09-29 15:54:03,946] INFO - 'train' duration (secs):  10.1087
-[2020-09-29 15:54:04,912] INFO - Accuracy of the network on the 10000 test images: 95.28 %
-[2020-09-29 15:54:04,913] INFO - 'evaluate' duration (secs):  0.9666
-[2020-09-29 15:54:04,917] INFO - 'main' duration (secs):  11.1500
+[2020-09-29 16:00:31,955] INFO - Some torch.cuda functionality unavailable
+[2020-09-29 16:00:33,752] INFO - Epoch [1/1], Step [100/600], Loss: 0.3604
+[2020-09-29 16:00:35,462] INFO - Epoch [1/1], Step [200/600], Loss: 0.2486
+[2020-09-29 16:00:37,192] INFO - Epoch [1/1], Step [300/600], Loss: 0.1971
+[2020-09-29 16:00:38,903] INFO - Epoch [1/1], Step [400/600], Loss: 0.1548
+[2020-09-29 16:00:40,599] INFO - Epoch [1/1], Step [500/600], Loss: 0.1834
+[2020-09-29 16:00:42,305] INFO - Epoch [1/1], Step [600/600], Loss: 0.0739
+[2020-09-29 16:00:42,306] INFO - 'train' duration (secs):  10.3092
+[2020-09-29 16:00:43,309] INFO - Accuracy of the network on the 10000 test images: 95.42 %
+[2020-09-29 16:00:43,309] INFO - 'evaluate' duration (secs):  1.0030
+[2020-09-29 16:00:43,314] INFO - 'main' duration (secs):  11.3831
