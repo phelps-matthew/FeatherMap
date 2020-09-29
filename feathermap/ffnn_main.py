@@ -4,7 +4,8 @@ import torchvision
 import torchvision.transforms as transforms
 from feathermap.models.feathernet import FeatherNet
 from feathermap.models.ffnn import FFNN, parse_arguments
-from feathermap.utils import timed, print_gpu_status
+from feathermap.utils import timed, print_gpu_status, set_logger
+import logging
 
 
 def load_data(batch_size, **kwargs):
@@ -53,7 +54,7 @@ def train(model, train_loader, epochs, lr, device):
             optimizer.step()
 
             if (i + 1) % 100 == 0:
-                print(
+                logging.info(
                     "Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}".format(
                         epoch + 1, epochs, i + 1, total_step, loss.item()
                     )
@@ -75,12 +76,15 @@ def evaluate(model, test_loader, device):
             correct += (predicted == labels).sum().item()
 
         accuracy = 100 * correct / total
-        print("Accuracy of the network on the 10000 test images: {} %".format(accuracy))
+        logging.info("Accuracy of the network on the 10000 test images: {} %".format(accuracy))
         return accuracy
 
 
 @timed
 def main():
+    # Initialize logger
+    set_logger("ffnn_main.log")
+
     args = parse_arguments()
 
     # Enable GPU support
