@@ -1,8 +1,8 @@
 #!/bin/bash
 # scp ~/Insight/project/FeatherMap/ec2setup.sh ubuntu@ec2..:~
 source activate pytorch_latest_p36
-sudo apt update
-sudo apt install neovim
+sudo apt update -y
+sudo apt install neovim -y
 # install dotfiles
 git clone --separate-git-dir=$HOME/dotfiles https://github.com/phelps-matthew/dotfiles.git tmpdotfiles
 rsync --recursive --verbose --exclude '.git' tmpdotfiles/ $HOME/
