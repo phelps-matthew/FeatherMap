@@ -115,7 +115,7 @@ def main():
     args = parse_arguments()
 
     # Initialize logger
-    set_logger("resnet_main_" + str(args.compress) + ".log")
+    set_logger("logs/resnet_main_compress_" + str(args.compress) + ".log")
 
     # Enable GPU support
     DEV = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -142,8 +142,7 @@ def main():
     evaluate(model, test_loader, DEV)
 
     # Save the model checkpoint
-    if args.save_model:
-        torch.save(model.state_dict(), "ffnn_compress_" + str(args.compress) + ".ckpt")
+    torch.save(model.state_dict(), "logs/ffnn_compress_" + str(args.compress) + ".ckpt")
 
 
 if __name__ == "__main__":
