@@ -11,7 +11,8 @@
 - [X] argprase for jobs?
 - [X] Test ResNet
 - [X] Docker containerization locally
-- [ ] Add logging for training times and accuracy
+- [X] Add logging for training times and accuracy
+- [ ] Fine-tuning based on param size
 - [ ] Docker on EC2 (no GPU)
 - [ ] Docker on EC2 (GPU)
 - [ ] Find best `num_workers`
