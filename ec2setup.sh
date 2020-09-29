@@ -1,4 +1,5 @@
 #!/bin/bash
+# scp ~/Insight/project/FeatherMap/ec2setup.sh ubuntu@ec2..:~
 source activate pytorch_latest_p36
 sudo apt update
 sudo apt install neovim
