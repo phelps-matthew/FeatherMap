@@ -142,7 +142,7 @@ def main():
     evaluate(model, test_loader, DEV)
 
     # Save the model checkpoint
-    torch.save(model.state_dict(), "logs/ffnn_compress_" + str(args.compress) + ".ckpt")
+    torch.save(model.state_dict(), "logs/resnet_compress_" + str(args.compress) + ".ckpt")
 
 
 if __name__ == "__main__":
