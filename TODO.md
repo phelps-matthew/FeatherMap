@@ -13,6 +13,9 @@
 - [X] Docker containerization locally
 - [X] Add logging for training times and accuracy
 - [ ] Fine-tuning based on param size
+-- [ ] Validation Set
+-- [ ] Early stopping w/ checkpoints
+-- [ ] Learning rate scheduler?
 - [ ] Docker on EC2 (no GPU)
 - [ ] Docker on EC2 (GPU)
 - [ ] Find best `num_workers`
