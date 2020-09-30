@@ -3,6 +3,9 @@ import torch
 import logging
 import matplotlib.pyplot as plt
 
+# Disable font warnings from matplotlib
+logging.getLogger("matplotlib.font_manager").disabled = True
+
 
 def timed(method):
     def time_me(*args, **kw):
