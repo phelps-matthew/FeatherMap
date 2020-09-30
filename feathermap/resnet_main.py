@@ -112,9 +112,7 @@ def evaluate(model, test_loader, device):
 
 
 @timed
-def main():
-    args = parse_arguments()
-
+def main(args):
     # Initialize logger
     set_logger("logs/estop/resnet_main_compress_" + str(args.compress) + ".log")
 
@@ -152,37 +150,21 @@ def main():
 
 if __name__ == "__main__":
     try:
-        parser = argparse.ArgumentParser(
-            description="ResNet34 on CIFAR10 with Structured Multi-Hashing compression",
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        parser = argparse.ArgumentParser( description="ResNet34 on CIFAR10 with Structured Multi-Hashing compression", formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         )
         parser.add_argument("--epochs", type=int, default=80, help="Number of epochs")
-        parser.add_argument(
-            "--batch-size", type=int, default=100, help="Mini-batch size"
+        parser.add_argument( "--batch-size", type=int, default=100, help="Mini-batch size"
         )
-        parser.add_argument(
-            "--lr", type=float, default=0.001, help="Learning rate at t=0"
+        parser.add_argument( "--lr", type=float, default=0.001, help="Learning rate at t=0"
         )
-        parser.add_argument(
-            "--num-workers",
-            type=int,
-            default=1,
-            help="Number of dataloader processing threads. Try adjusting for faster training",
+        parser.add_argument( "--num-workers", type=int, default=1, help="Number of dataloader processing threads. Try adjusting for faster training",
         )
-        parser.add_argument(
-            "--compress",
-            type=float,
-            default=0.5,
-            help="Compression rate. Set to zero for base model",
+        parser.add_argument( "--compress", type=float, default=0.5, help="Compression rate. Set to zero for base model",
         )
-        parser.add_argument(
-            "--save-model",
-            action="store_true",
-            default=False,
-            help="Save model in local directory",
+        parser.add_argument( "--save-model", action="store_true", default=False, help="Save model in local directory",
         )
         args = parser.parse_args()
         print(args)
-        main()
+        main(args)
     except KeyboardInterrupt:
         exit()
