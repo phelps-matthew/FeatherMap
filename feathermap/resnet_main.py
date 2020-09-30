@@ -10,11 +10,12 @@ import torch
 import torch.nn as nn
 import torchvision
 import torchvision.transforms as transforms
-from feathermap.models.resnet import ResidualBlock, ResNet, parse_arguments
+from feathermap.models.resnet import ResidualBlock, ResNet
 from feathermap.models.feathernet import FeatherNet
 from feathermap.utils import timed, print_gpu_status, set_logger
 import logging
 import argparse
+from feathermap.data_loader import get_train_valid_loader, get_test_loader
 
 
 def load_data(batch_size, **kwargs):
@@ -45,6 +46,9 @@ def load_data(batch_size, **kwargs):
     test_loader = torch.utils.data.DataLoader(
         dataset=test_dataset, batch_size=batch_size, shuffle=False, **kwargs
     )
+    # fmt: off
+    import ipdb,os; ipdb.set_trace(context=30)  # noqa
+    # fmt: on
     return train_loader, test_loader
 
 
