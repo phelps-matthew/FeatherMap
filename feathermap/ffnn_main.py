@@ -6,6 +6,7 @@ from feathermap.models.feathernet import FeatherNet
 from feathermap.models.ffnn import FFNN, parse_arguments
 from feathermap.utils import timed, print_gpu_status, set_logger
 import logging
+import argparse
 
 
 def load_data(batch_size, **kwargs):
@@ -75,7 +76,9 @@ def evaluate(model, test_loader, device):
             correct += (predicted == labels).sum().item()
 
         accuracy = 100 * correct / total
-        logging.info("Accuracy of the network on the 10000 test images: {} %".format(accuracy))
+        logging.info(
+            "Accuracy of the network on the 10000 test images: {} %".format(accuracy)
+        )
         return accuracy
 
 
@@ -121,11 +124,44 @@ def main():
     long_eval(100, model, test_loader, DEV)
 
     # Save the model checkpoint
-    #torch.save(model.state_dict(), "logs/ffnn_compress_" + str(args.compress) + ".ckpt")
+    if args.save_model:
+        torch.save(model.state_dict(), "logs/ffnn_compress_" + str(args.compress) + ".ckpt")
 
 
 if __name__ == "__main__":
     try:
+        parser = argparse.ArgumentParser(
+            description="FFNN on MNIST with Structured Multi-Hashing compression",
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        )
+        parser.add_argument("--hidden-size", type=int, default=500, help="Hidden size")
+        parser.add_argument("--epochs", type=int, default=5, help="Number of epochs")
+        parser.add_argument(
+            "--batch-size", type=int, default=100, help="Mini-batch size"
+        )
+        parser.add_argument(
+            "--lr", type=float, default=0.001, help="Learning rate at t=0"
+        )
+        parser.add_argument(
+            "--num-workers",
+            type=int,
+            default=1,
+            help="Number of dataloader processing threads. Try adjusting for faster training",
+        )
+        parser.add_argument(
+            "--compress",
+            type=float,
+            default=0.5,
+            help="Compression rate. Set to zero for base model",
+        )
+        parser.add_argument(
+            "--save-model",
+            action="store_true",
+            default=False,
+            help="Save model in local directory",
+        )
+        args = parser.parse_args()
+        print(args)
         main()
     except KeyboardInterrupt:
         exit()

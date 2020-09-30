@@ -14,6 +14,7 @@ from feathermap.models.resnet import ResidualBlock, ResNet, parse_arguments
 from feathermap.models.feathernet import FeatherNet
 from feathermap.utils import timed, print_gpu_status, set_logger
 import logging
+import argparse
 
 
 def load_data(batch_size, **kwargs):
@@ -115,7 +116,7 @@ def main():
     args = parse_arguments()
 
     # Initialize logger
-    set_logger("logs/resnet_main_compress_" + str(args.compress) + ".log")
+    set_logger("logs/estop/resnet_main_compress_" + str(args.compress) + ".log")
 
     # Enable GPU support
     DEV = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -142,11 +143,46 @@ def main():
     evaluate(model, test_loader, DEV)
 
     # Save the model checkpoint
-    torch.save(model.state_dict(), "logs/resnet_compress_" + str(args.compress) + ".ckpt")
+    if args.save_model:
+        torch.save(
+            model.state_dict(),
+            "logs/estop/resnet_compress_" + str(args.compress) + ".ckpt",
+        )
 
 
 if __name__ == "__main__":
     try:
+        parser = argparse.ArgumentParser(
+            description="ResNet34 on CIFAR10 with Structured Multi-Hashing compression",
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        )
+        parser.add_argument("--epochs", type=int, default=80, help="Number of epochs")
+        parser.add_argument(
+            "--batch-size", type=int, default=100, help="Mini-batch size"
+        )
+        parser.add_argument(
+            "--lr", type=float, default=0.001, help="Learning rate at t=0"
+        )
+        parser.add_argument(
+            "--num-workers",
+            type=int,
+            default=1,
+            help="Number of dataloader processing threads. Try adjusting for faster training",
+        )
+        parser.add_argument(
+            "--compress",
+            type=float,
+            default=0.5,
+            help="Compression rate. Set to zero for base model",
+        )
+        parser.add_argument(
+            "--save-model",
+            action="store_true",
+            default=False,
+            help="Save model in local directory",
+        )
+        args = parser.parse_args()
+        print(args)
         main()
     except KeyboardInterrupt:
         exit()
