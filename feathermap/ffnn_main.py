@@ -61,7 +61,6 @@ def train(model, train_loader, epochs, lr, device):
                 )
 
 
-@timed
 def evaluate(model, test_loader, device):
     model.eval()
     with torch.no_grad():
@@ -112,11 +111,17 @@ def main():
     train_loader, test_loader = load_data(args.batch_size, **kwargs)
 
     # Train, evaluate
-    train(model, train_loader, args.epochs, args.lr, DEV)
-    evaluate(model, test_loader, DEV)
+    # train(model, train_loader, args.epochs, args.lr, DEV)
+
+    @timed
+    def long_eval(num, model, test_loader, DEV):
+        for i in range(num):
+            evaluate(model, test_loader, DEV)
+
+    long_eval(100, model, test_loader, DEV)
 
     # Save the model checkpoint
-    torch.save(model.state_dict(), "logs/ffnn_compress_" + str(args.compress) + ".ckpt")
+    #torch.save(model.state_dict(), "logs/ffnn_compress_" + str(args.compress) + ".ckpt")
 
 
 if __name__ == "__main__":

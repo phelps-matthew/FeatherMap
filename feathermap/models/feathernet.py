@@ -134,7 +134,7 @@ class FeatherNet(nn.Module):
 
 
 def main():
-    from feathermap.resnet import ResNet, ResidualBlock
+    from feathermap.models.resnet import ResNet, ResidualBlock
 
     # Device configuration
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
