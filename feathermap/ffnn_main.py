@@ -3,7 +3,7 @@ import torch.nn as nn
 import torchvision
 import torchvision.transforms as transforms
 from feathermap.models.feathernet import FeatherNet
-from feathermap.models.ffnn import FFNN, parse_arguments
+from feathermap.models.ffnn import FFNN
 from feathermap.utils import timed, print_gpu_status, set_logger
 import logging
 import argparse
