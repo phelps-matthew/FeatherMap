@@ -18,40 +18,6 @@ import argparse
 from feathermap.data_loader import get_train_valid_loader, get_test_loader
 
 
-def load_data(batch_size, **kwargs):
-    # Image preprocessing modules
-    transform = transforms.Compose(
-        [
-            transforms.Pad(4),
-            transforms.RandomHorizontalFlip(),
-            transforms.RandomCrop(32),
-            transforms.ToTensor(),
-        ]
-    )
-
-    # CIFAR-10 dataset
-    train_dataset = torchvision.datasets.CIFAR10(
-        root="./data/", train=True, transform=transform, download=True, **kwargs
-    )
-
-    test_dataset = torchvision.datasets.CIFAR10(
-        root="./data/", train=False, transform=transforms.ToTensor()
-    )
-
-    # Data loader
-    train_loader = torch.utils.data.DataLoader(
-        dataset=train_dataset, batch_size=batch_size, shuffle=True, **kwargs
-    )
-
-    test_loader = torch.utils.data.DataLoader(
-        dataset=test_dataset, batch_size=batch_size, shuffle=False, **kwargs
-    )
-    # fmt: off
-    import ipdb,os; ipdb.set_trace(context=30)  # noqa
-    # fmt: on
-    return train_loader, test_loader
-
-
 @timed
 def train(model, train_loader, epochs, lr, device):
     model.train()
@@ -82,10 +48,8 @@ def train(model, train_loader, epochs, lr, device):
             optimizer.step()
 
             if (i + 1) % 100 == 0:
-                logging.info(
-                    "Epoch [{}/{}], Step [{}/{}] Loss: {:.4f}".format(
-                        epoch + 1, epochs, i + 1, total_step, loss.item()
-                    )
+                logging.info("Epoch [{}/{}], Step [{}/{}] Loss: {:.4f}".format(
+                        epoch + 1, epochs, i + 1, total_step, loss.item())
                 )
 
         # Decay learning rate
@@ -118,27 +82,38 @@ def evaluate(model, test_loader, device):
 @timed
 def main(args):
     # Initialize logger
-    set_logger("logs/estop/resnet_main_compress_" + str(args.compress) + ".log")
+    set_logger("logs/estop/asdf_resnet_main_compress_" + str(args.compress) + ".log")
 
     # Enable GPU support
-    DEV = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    use_cuda = torch.cuda.is_available()
     print_gpu_status()
-    # Device configuration
-    kwargs = (
-        {"num_workers": args.num_workers, "pin_memory": True}
-        if torch.cuda.is_available()
-        else {}
-    )
+    if use_cuda:
+        DEV = torch.device("cuda:0")
+        cuda_kwargs = {"num_workers": args.num_workers, "pin_memory": True}
+    else:
+        DEV = torch.device("cpu")
+        cuda_kwargs = {}
 
     # Select model
     base_model = ResNet(ResidualBlock, [2, 2, 2])
     if args.compress:
-        model = FeatherNet(base_model, exclude=(nn.BatchNorm2d), compress=args.compress)
+        model = FeatherNet(base_model, exclude=(nn.BatchNorm2d), compress=args.compress).to(DEV)
     else:
         model = base_model.to(DEV)
 
-    # Load data
-    train_loader, test_loader = load_data(args.batch_size, **kwargs)
+    # Create dataloaders
+    train_loader, valid_loader = get_train_valid_loader(
+        data_dir=args.data_dir,
+        batch_size=args.batch_size,
+        augment=True,
+        random_seed=42,
+        valid_size=args.valid_size,
+        show_sample=args.show_sample,
+        **cuda_kwargs
+    )
+    test_loader = get_test_loader(
+        data_dir=args.data_dir, batch_size=args.batch_size, **cuda_kwargs
+    )
 
     # Train, evaluate
     train(model, train_loader, args.epochs, args.lr, DEV)
@@ -148,7 +123,7 @@ def main(args):
     if args.save_model:
         torch.save(
             model.state_dict(),
-            "logs/estop/resnet_compress_" + str(args.compress) + ".ckpt",
+            "logs/estop/resnet_compress_asdf" + str(args.compress) + ".ckpt",
         )
 
 
@@ -159,11 +134,48 @@ if __name__ == "__main__":
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         )
         parser.add_argument("--epochs", type=int, default=80, help="Number of epochs")
-        parser.add_argument( "--batch-size", type=int, default=100, help="Mini-batch size")
-        parser.add_argument( "--lr", type=float, default=0.001, help="Learning rate at t=0")
-        parser.add_argument( "--num-workers", type=int, default=1, help="Number of dataloader processing threads. Try adjusting for faster training",)
-        parser.add_argument( "--compress", type=float, default=0.5, help="Compression rate. Set to zero for base model",)
-        parser.add_argument( "--save-model", action="store_true", default=False, help="Save model in local directory",)
+        parser.add_argument(
+            "--batch-size", type=int, default=100, help="Mini-batch size"
+        )
+        parser.add_argument(
+            "--lr", type=float, default=0.001, help="Learning rate at t=0"
+        )
+        parser.add_argument(
+            "--num-workers",
+            type=int,
+            default=1,
+            help="Number of dataloader processing threads. Try adjusting for faster training",
+        )
+        parser.add_argument(
+            "--compress",
+            type=float,
+            default=0.5,
+            help="Compression rate. Set to zero for base model",
+        )
+        parser.add_argument(
+            "--save-model",
+            action="store_true",
+            default=False,
+            help="Save model in local directory",
+        )
+        parser.add_argument(
+            "--data-dir",
+            type=str,
+            default="./data/",
+            help="Path to store CIFAR10 data",
+        )
+        parser.add_argument(
+            "--valid-size",
+            type=float,
+            default=0.1,
+            help="Validation set size as fraction of train",
+        )
+        parser.add_argument(
+            "--show-sample",
+            action="store_true",
+            default=False,
+            help="Plot 9x9 sample grid of dataset",
+        )
         args = parser.parse_args()
         print(args)
         main(args)
