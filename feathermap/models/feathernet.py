@@ -33,7 +33,9 @@ class FeatherNet(nn.Module):
         # Noramlize V1 and V2
         self.norm_V()
 
-        self.V = self.V_iter()
+        # Use dictionary as pointer
+        self.V = {"V": self.V_iter()}
+        self.register_inter_hooks()
 
     def norm_V(self):
         """Currently implemented only for uniform intializations"""
@@ -87,7 +89,7 @@ class FeatherNet(nn.Module):
                 if isinstance(module, (self.exclude, FeatherNet)):
                     continue
                 if getattr(module, "weight") is not None:
-                    yield module
+                    yield name, module
             except nn.modules.module.ModuleAttributeError:
                 pass
 
@@ -96,45 +98,54 @@ class FeatherNet(nn.Module):
             for j in range(self.size_n):
                 yield torch.dot(self.V1[i, :], self.V2[:, j])
 
-    def register_hooks(self):
-        for module in self.get_WorB_modules():
-            load_layer = FeatherNet.LoadLayer(module, self.V)
-            module.register_forward_pre_hook(load_layer)
+    def register_outer_hooks(self):
+        pass
 
-    class ConstructV:
-        def __init__(self):
-            pass
+    def register_inter_hooks(self):
+        prehooks, posthooks = [], []
+        for name, module in self.get_WorB_modules():
+            load_layer = self.LoadLayer(module, name, self.V)
+            unload_layer = self.UnloadLayer(module, name)
+            module.register_forward_pre_hook(load_layer)
+            module.register_forward_hook(unload_layer)
+            prehooks.append(load_layer)
+            posthooks.append(load_layer)
+        return prehooks
 
     class UnloadLayer:
-        def __init__(self):
+        def __init__(self, module, name):
+            self.module = module
+            self.name = name
+
+        def __call__(self, module, x, y):
+            print("posthook activated: {} {}".format(self.name, self.module))
+            module.weight = None
+            module.bias = None
             pass
 
-        def __call__(self, module, x):
-            module.weight = None
-            if module.bias:
-                module.bias = None
-
     class LoadLayer:
-        def __init__(self, module, V_iter):
-            self.V = V_iter
+        def __init__(self, name, module, V_dict):
+            self.module = module
+            self.name = name
+            self.V_dict = V_dict
             self.w_size = module.weight.size()
             self.w_num = module.weight.numel()
-            self.bias = False
-            if module.bias is not None:
-                self.bias = True
+            self.bias = module.bias is not None
+            if self.bias:
                 self.b_size = module.bias.size()
                 self.b_num = module.bias.numel()
 
         def __call__(self, module, x):
+            print("prehook activated: {} {}".format(self.name, self.module))
             w = torch.empty(self.w_num)
             for i in range(self.w_num):
-                w[i] = next(self.V)
-            module.weight = w.reshape(self.w_size)
+                w[i] = next(self.V_dict["V"])
+                module.weight = w.reshape(self.w_size)
             if self.bias:
                 b = torch.empty(self.b_num)
                 for i in range(self.b_num):
-                    b[i] = next(self.V)
-                module.bias = b.reshape(self.b_size)
+                    b[i] = next(self.V_dict["V"])
+                    module.bias = b.reshape(self.b_size)
 
     def get_modules(self):
         for module in self.modules():
@@ -193,21 +204,6 @@ class FeatherNet(nn.Module):
         return self.module(*args, **kwargs)
 
 
-class SaveOutput:
-    def __init__(self):
-        self.outputs = []
-        self.nums = []
-
-    def __call__(self, module, module_in):
-        self.outputs.append(module)
-        weight = getattr(module, "weight")
-        self.nums.append(weight.numel())
-        print(str(type(module)) + ".weight", weight.numel())
-
-    def clear(self):
-        self.outputs = []
-
-
 def main():
     from feathermap.models.resnet import ResNet, ResidualBlock
 
@@ -233,8 +229,8 @@ def main():
             print(name + "." + kind + ": " + str(getattr(mod, kind).size()))
             pass
         print("-" * 100)
-        frmodel.register_hooks()
-        print(frmodel._forward_pre_hooks)
+        frmodel(x)
+        print(frmodel)
 
     res_test()
 
