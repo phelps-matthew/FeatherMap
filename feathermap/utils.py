@@ -2,6 +2,10 @@ from timeit import default_timer as timer
 import torch
 import logging
 import matplotlib.pyplot as plt
+import numpy as np
+
+# Disable font warnings from matplotlib
+logging.getLogger("matplotlib.font_manager").disabled = True
 
 
 def timed(method):
@@ -62,8 +66,9 @@ def plot_images(images, cls_true, cls_pred=None):
     fig, axes = plt.subplots(3, 3)
 
     for i, ax in enumerate(axes.flat):
-        # plot img
-        ax.imshow(images[i, :, :, :], interpolation="spline16")
+        # convert [-1,1] to [0, 255]; imshow expects np.unint8 as dtype
+        imgs = np.round((images[i, :, :, :] + 1) * 255 / 2).astype(np.uint8)
+        ax.imshow(imgs, interpolation="spline16")
 
         # show true & predicted classes
         cls_true_name = label_names[cls_true[i]]
