@@ -33,6 +33,8 @@ class FeatherNet(nn.Module):
         # Noramlize V1 and V2
         self.norm_V()
 
+        self.V = self.V_iter()
+
     def norm_V(self):
         """Currently implemented only for uniform intializations"""
         # sigma = M**(-1/4); bound follows from uniform dist.
@@ -42,6 +44,7 @@ class FeatherNet(nn.Module):
 
     def WandBtoV(self):
         """Needs to be efficient"""
+        a = torch.matmul(self.V1, self.V2)
         self.V = torch.matmul(self.V1, self.V2)
         V = self.V.view(-1, 1)  # V.is_contiguous() = True
         i = 0
@@ -77,6 +80,67 @@ class FeatherNet(nn.Module):
             except nn.modules.module.ModuleAttributeError:
                 pass
 
+    def get_WorB_modules(self) -> Iterator[Tuple[str, nn.Module, str]]:
+        """Helper function to return weight and bias modules in order"""
+        for name, module in self.named_modules():
+            try:
+                if isinstance(module, (self.exclude, FeatherNet)):
+                    continue
+                if getattr(module, "weight") is not None:
+                    yield module
+            except nn.modules.module.ModuleAttributeError:
+                pass
+
+    def V_iter(self):
+        for i in range(self.size_n):
+            for j in range(self.size_n):
+                yield torch.dot(self.V1[i, :], self.V2[:, j])
+
+    def register_hooks(self):
+        for module in self.get_WorB_modules():
+            load_layer = FeatherNet.LoadLayer(module, self.V)
+            module.register_forward_pre_hook(load_layer)
+
+    class ConstructV:
+        def __init__(self):
+            pass
+
+    class UnloadLayer:
+        def __init__(self):
+            pass
+
+        def __call__(self, module, x):
+            module.weight = None
+            if module.bias:
+                module.bias = None
+
+    class LoadLayer:
+        def __init__(self, module, V_iter):
+            self.V = V_iter
+            self.w_size = module.weight.size()
+            self.w_num = module.weight.numel()
+            self.bias = False
+            if module.bias is not None:
+                self.bias = True
+                self.b_size = module.bias.size()
+                self.b_num = module.bias.numel()
+
+        def __call__(self, module, x):
+            w = torch.empty(self.w_num)
+            for i in range(self.w_num):
+                w[i] = next(self.V)
+            module.weight = w.reshape(self.w_size)
+            if self.bias:
+                b = torch.empty(self.b_num)
+                for i in range(self.b_num):
+                    b[i] = next(self.V)
+                module.bias = b.reshape(self.b_size)
+
+    def get_modules(self):
+        for module in self.modules():
+            if isinstance(module, self.exclude):
+                continue
+
     def unregister_params(self) -> None:
         """Delete params, set attributes as Tensors of prior data,
         register scaler params"""
@@ -98,11 +162,7 @@ class FeatherNet(nn.Module):
                 module.register_parameter(
                     kind + "_p", Parameter(torch.Tensor([scaler]))
                 )
-                print(
-                    "Parameter unregistered, assigned to type Tensor: {}".format(
-                        name + "." + kind
-                    )
-                )
+                # print( "Parameter unregistered, assigned to type Tensor: {}".format( name + "." + kind))
             except KeyError:
                 print(
                     "{} is already registered as {}".format(
@@ -136,10 +196,14 @@ class FeatherNet(nn.Module):
 class SaveOutput:
     def __init__(self):
         self.outputs = []
-        
+        self.nums = []
+
     def __call__(self, module, module_in):
         self.outputs.append(module)
-        
+        weight = getattr(module, "weight")
+        self.nums.append(weight.numel())
+        print(str(type(module)) + ".weight", weight.numel())
+
     def clear(self):
         self.outputs = []
 
@@ -162,11 +226,15 @@ def main():
         [print(name, v) for name, v in flmodel.named_parameters()]
 
     def res_test():
+        x = torch.randn([1, 3, 32, 32])
         rmodel = ResNet(ResidualBlock, [2, 2, 2]).to(device)
         frmodel = FeatherNet(rmodel, exclude=(nn.BatchNorm2d), compress=0.5).to(device)
         for name, mod, kind in frmodel.get_WandB_modules():
             print(name + "." + kind + ": " + str(getattr(mod, kind).size()))
-        print('-'*100)
+            pass
+        print("-" * 100)
+        frmodel.register_hooks()
+        print(frmodel._forward_pre_hooks)
 
     res_test()
 
