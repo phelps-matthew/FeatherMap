@@ -5,6 +5,48 @@ from torch import Tensor
 from typing import Iterator, Tuple
 from math import ceil, sqrt
 import copy
+from timeit import default_timer as timer
+
+
+class UnloadLayer:
+    """Forward hook for inner layers"""
+
+    def __init__(self, name, module):
+        self.module = module
+        self.name = name
+
+    def __call__(self, module, x, y):
+        #print("posthook activated: {} {}".format(self.name, self.module))
+        module.weight = None
+        module.bias = None
+        pass
+
+
+class LoadLayer:
+    """Forward prehook for inner layers"""
+
+    def __init__(self, name, module, V_dict):
+        self.module = module
+        self.name = name
+        self.V_dict = V_dict
+        self.w_size = module.weight.size()
+        self.w_num = module.weight.numel()
+        self.bias = module.bias is not None
+        if self.bias:
+            self.b_size = module.bias.size()
+            self.b_num = module.bias.numel()
+
+    def __call__(self, module, x):
+        #print("prehook activated: {} {}".format(self.name, self.module))
+        w = torch.empty(self.w_num)
+        for i in range(self.w_num):
+            w[i] = next(self.V_dict["V"])
+            module.weight = w.reshape(self.w_size)
+        if self.bias:
+            b = torch.empty(self.b_num)
+            for i in range(self.b_num):
+                b[i] = next(self.V_dict["V"])
+                module.bias = b.reshape(self.b_size)
 
 
 class FeatherNet(nn.Module):
@@ -46,7 +88,6 @@ class FeatherNet(nn.Module):
 
     def WandBtoV(self):
         """Needs to be efficient"""
-        a = torch.matmul(self.V1, self.V2)
         self.V = torch.matmul(self.V1, self.V2)
         V = self.V.view(-1, 1)  # V.is_contiguous() = True
         i = 0
@@ -104,48 +145,13 @@ class FeatherNet(nn.Module):
     def register_inter_hooks(self):
         prehooks, posthooks = [], []
         for name, module in self.get_WorB_modules():
-            load_layer = self.LoadLayer(module, name, self.V)
-            unload_layer = self.UnloadLayer(module, name)
+            load_layer = LoadLayer(name, module, self.V)
+            unload_layer = UnloadLayer(name, module)
             module.register_forward_pre_hook(load_layer)
             module.register_forward_hook(unload_layer)
             prehooks.append(load_layer)
             posthooks.append(load_layer)
         return prehooks
-
-    class UnloadLayer:
-        def __init__(self, module, name):
-            self.module = module
-            self.name = name
-
-        def __call__(self, module, x, y):
-            print("posthook activated: {} {}".format(self.name, self.module))
-            module.weight = None
-            module.bias = None
-            pass
-
-    class LoadLayer:
-        def __init__(self, name, module, V_dict):
-            self.module = module
-            self.name = name
-            self.V_dict = V_dict
-            self.w_size = module.weight.size()
-            self.w_num = module.weight.numel()
-            self.bias = module.bias is not None
-            if self.bias:
-                self.b_size = module.bias.size()
-                self.b_num = module.bias.numel()
-
-        def __call__(self, module, x):
-            print("prehook activated: {} {}".format(self.name, self.module))
-            w = torch.empty(self.w_num)
-            for i in range(self.w_num):
-                w[i] = next(self.V_dict["V"])
-                module.weight = w.reshape(self.w_size)
-            if self.bias:
-                b = torch.empty(self.b_num)
-                for i in range(self.b_num):
-                    b[i] = next(self.V_dict["V"])
-                    module.bias = b.reshape(self.b_size)
 
     def get_modules(self):
         for module in self.modules():
@@ -224,13 +230,17 @@ def main():
     def res_test():
         x = torch.randn([1, 3, 32, 32])
         rmodel = ResNet(ResidualBlock, [2, 2, 2]).to(device)
-        frmodel = FeatherNet(rmodel, exclude=(nn.BatchNorm2d), compress=0.5).to(device)
+        frmodel = FeatherNet(rmodel, exclude=(nn.BatchNorm2d), compress=0.8).to(device)
         for name, mod, kind in frmodel.get_WandB_modules():
-            print(name + "." + kind + ": " + str(getattr(mod, kind).size()))
+            #print(name + "." + kind + ": " + str(getattr(mod, kind).size()))
             pass
         print("-" * 100)
-        frmodel(x)
-        print(frmodel)
+
+        start = timer()
+        for i in range(1000):
+            y=frmodel(x)
+        end = timer()
+        print(end-start)
 
     res_test()
 
