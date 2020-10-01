@@ -8,27 +8,13 @@ import copy
 from timeit import default_timer as timer
 
 
-class UnloadLayer:
-    """Forward hook for inner layers"""
-
-    def __init__(self, name, module):
-        self.module = module
-        self.name = name
-
-    def __call__(self, module, x, y):
-        #print("posthook activated: {} {}".format(self.name, self.module))
-        module.weight = None
-        module.bias = None
-        pass
-
-
 class LoadLayer:
     """Forward prehook for inner layers"""
 
-    def __init__(self, name, module, V_dict):
+    def __init__(self, name, module, V):
         self.module = module
         self.name = name
-        self.V_dict = V_dict
+        self.V = V
         self.w_size = module.weight.size()
         self.w_num = module.weight.numel()
         self.bias = module.bias is not None
@@ -36,17 +22,38 @@ class LoadLayer:
             self.b_size = module.bias.size()
             self.b_num = module.bias.numel()
 
-    def __call__(self, module, x):
-        #print("prehook activated: {} {}".format(self.name, self.module))
+    def __call__(self, module, inputs):
+        print("prehook activated: {} {}".format(self.name, self.module))
         w = torch.empty(self.w_num)
+        V_iterator = self.V[0]
         for i in range(self.w_num):
-            w[i] = next(self.V_dict["V"])
+            w[i] = next(V_iterator)
             module.weight = w.reshape(self.w_size)
         if self.bias:
             b = torch.empty(self.b_num)
             for i in range(self.b_num):
-                b[i] = next(self.V_dict["V"])
+                b[i] = next(V_iterator)
                 module.bias = b.reshape(self.b_size)
+        print(self.V)
+
+
+class UnloadLayer:
+    """Forward hook for inner layers. Note, could turn into function"""
+
+    def __init__(self, name, module):
+        self.module = module
+        self.name = name
+
+    def __call__(self, module, inputs, outputs):
+        print("posthook activated: {} {}".format(self.name, self.module))
+        module.weight = None
+        module.bias = None
+
+
+def construct_V(module, inputs):
+    """Forward prehook for outermost FeatherNet layer"""
+    print("Outer prehook activated: {}".format(module.V[0]))
+    module.V[0] = module.V_iter()
 
 
 class FeatherNet(nn.Module):
@@ -72,12 +79,17 @@ class FeatherNet(nn.Module):
         self.V1 = Parameter(torch.Tensor(self.size_n, self.size_m))
         self.V2 = Parameter(torch.Tensor(self.size_m, self.size_n))
 
+        self.prehooks = None
+        self.posthooks = None
+        self.prehook_outer = None
+
         # Noramlize V1 and V2
         self.norm_V()
 
-        # Use dictionary as pointer
-        self.V = {"V": self.V_iter()}
+        # Use list as pointer
+        self.V = [self.V_iter()]
         self.register_inter_hooks()
+        self.register_outer_hooks()
 
     def norm_V(self):
         """Currently implemented only for uniform intializations"""
@@ -139,9 +151,6 @@ class FeatherNet(nn.Module):
             for j in range(self.size_n):
                 yield torch.dot(self.V1[i, :], self.V2[:, j])
 
-    def register_outer_hooks(self):
-        pass
-
     def register_inter_hooks(self):
         prehooks, posthooks = [], []
         for name, module in self.get_WorB_modules():
@@ -151,7 +160,12 @@ class FeatherNet(nn.Module):
             module.register_forward_hook(unload_layer)
             prehooks.append(load_layer)
             posthooks.append(load_layer)
-        return prehooks
+        self.prehooks = prehooks
+        self.posthooks = posthooks
+
+    def register_outer_hooks(self):
+        prehook = self.register_forward_pre_hook(construct_V)
+        self.prehook_outer = prehook
 
     def get_modules(self):
         for module in self.modules():
@@ -206,7 +220,8 @@ class FeatherNet(nn.Module):
 
     def forward(self, *args, **kwargs):
         if self.training:
-            self.WandBtoV()
+            #self.WandBtoV()
+            pass
         return self.module(*args, **kwargs)
 
 
@@ -231,16 +246,13 @@ def main():
         x = torch.randn([1, 3, 32, 32])
         rmodel = ResNet(ResidualBlock, [2, 2, 2]).to(device)
         frmodel = FeatherNet(rmodel, exclude=(nn.BatchNorm2d), compress=0.8).to(device)
-        for name, mod, kind in frmodel.get_WandB_modules():
-            #print(name + "." + kind + ": " + str(getattr(mod, kind).size()))
-            pass
-        print("-" * 100)
-
         start = timer()
-        for i in range(1000):
-            y=frmodel(x)
+        # 692 s over 100 images
+        for _ in range(100):
+            frmodel(x)
         end = timer()
         print(end-start)
+        exit()
 
     res_test()
 
