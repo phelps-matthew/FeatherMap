@@ -82,7 +82,7 @@ def evaluate(model, test_loader, device):
 @timed
 def main(args):
     # Initialize logger
-    set_logger("logs/estop/asdf_resnet_main_compress_" + str(args.compress) + ".log")
+    set_logger(args.log_dir + "resnet_main_compress_" + str(args.compress) + ".log")
 
     # Enable GPU support
     use_cuda = torch.cuda.is_available()
@@ -123,7 +123,7 @@ def main(args):
     if args.save_model:
         torch.save(
             model.state_dict(),
-            "logs/estop/resnet_compress_asdf" + str(args.compress) + ".ckpt",
+            args.log_dir + "resnet_compress_" + str(args.compress) + ".ckpt",
         )
 
 
@@ -163,6 +163,12 @@ if __name__ == "__main__":
             type=str,
             default="./data/",
             help="Path to store CIFAR10 data",
+        )
+        parser.add_argument(
+            "--log-dir",
+            type=str,
+            default="./logs/",
+            help="Path to store training and evaluation logs",
         )
         parser.add_argument(
             "--valid-size",
