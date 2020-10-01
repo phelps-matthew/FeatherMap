@@ -133,6 +133,17 @@ class FeatherNet(nn.Module):
         return self.module(*args, **kwargs)
 
 
+class SaveOutput:
+    def __init__(self):
+        self.outputs = []
+        
+    def __call__(self, module, module_in):
+        self.outputs.append(module)
+        
+    def clear(self):
+        self.outputs = []
+
+
 def main():
     from feathermap.models.resnet import ResNet, ResidualBlock
 
@@ -142,6 +153,7 @@ def main():
     def linear_test():
         lmodel = nn.Linear(2, 4).to(device)
         flmodel = FeatherNet(lmodel, compress=0.5)
+        flmodel.WandBtoV()
         print(flmodel.num_WandB(), flmodel.size_n, flmodel.size_m)
         print("V1: {}".format(flmodel.V1))
         print("V2: {}".format(flmodel.V2))
@@ -152,21 +164,9 @@ def main():
     def res_test():
         rmodel = ResNet(ResidualBlock, [2, 2, 2]).to(device)
         frmodel = FeatherNet(rmodel, exclude=(nn.BatchNorm2d), compress=0.5).to(device)
-        # print(frmodel.num_WandB(), frmodel.size_n, frmodel.size_m)
-        # print("V1: {}".format(frmodel.V1))
-        # print("V2: {}".format(frmodel.V2))
-        # print("V: {}".format(frmodel.V))
-        # frmodel.WandBtoV()
         for name, mod, kind in frmodel.get_WandB_modules():
-            # print(name + "." + kind)
-            pass
-        for name, param in rmodel.named_parameters():
-            print(name)
-        for name, param in frmodel.named_parameters():
-            print(name)
-        # Compare compressed sizes; confirmed.
-        torch.save(frmodel.state_dict(), "feather.ckpt")
-        torch.save(rmodel.state_dict(), "resnet.ckpt")
+            print(name + "." + kind + ": " + str(getattr(mod, kind).size()))
+        print('-'*100)
 
     res_test()
 
