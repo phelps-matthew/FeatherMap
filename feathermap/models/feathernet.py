@@ -9,32 +9,33 @@ from timeit import default_timer as timer
 
 
 class LoadLayer:
-    """Forward prehook for inner layers"""
+    """Forward prehook for inner layers. Load weights from V, calculating on the fly"""
 
-    def __init__(self, name, module, V):
+    def __init__(self, name, module, V_iter):
         self.module = module
         self.name = name
-        self.V = V
+        self.V_iter = V_iter
         self.w_size = module.weight.size()
         self.w_num = module.weight.numel()
+        self.w_p = module.weight_p  # weight scaler
         self.bias = module.bias is not None
         if self.bias:
             self.b_size = module.bias.size()
             self.b_num = module.bias.numel()
+            self.b_p = module.bias_p  # bias scaler
 
     def __call__(self, module, inputs):
         print("prehook activated: {} {}".format(self.name, self.module))
         w = torch.empty(self.w_num)
-        V_iterator = self.V[0]
+        V = self.V_iter[0]
         for i in range(self.w_num):
-            w[i] = next(V_iterator)
+            w[i] = self.w_p * next(V)
             module.weight = w.reshape(self.w_size)
         if self.bias:
             b = torch.empty(self.b_num)
             for i in range(self.b_num):
-                b[i] = next(V_iterator)
+                b[i] = self.b_p * next(V)
                 module.bias = b.reshape(self.b_size)
-        print(self.V)
 
 
 class UnloadLayer:
@@ -52,8 +53,8 @@ class UnloadLayer:
 
 def construct_V(module, inputs):
     """Forward prehook for outermost FeatherNet layer"""
-    print("Outer prehook activated: {}".format(module.V[0]))
-    module.V[0] = module.V_iter()
+    print("Outer prehook activated: {}".format(module.V_iter[0]))
+    module.V_iter[0] = module.V_generator()
 
 
 class FeatherNet(nn.Module):
@@ -81,12 +82,13 @@ class FeatherNet(nn.Module):
         self.size_m = ceil((self.compress * self.size_n) / 2)
         self.V1 = Parameter(torch.Tensor(self.size_n, self.size_m))
         self.V2 = Parameter(torch.Tensor(self.size_m, self.size_n))
+        self.V = None
 
         # Normalize V1 and V2
         self.norm_V()
 
         # Use list as pointer
-        self.V = [self.V_iter()]
+        self.V_iter = [self.V_generator()]
 
     def norm_V(self):
         """Currently implemented only for uniform intializations"""
@@ -143,7 +145,7 @@ class FeatherNet(nn.Module):
             except nn.modules.module.ModuleAttributeError:
                 pass
 
-    def V_iter(self):
+    def V_generator(self):
         for i in range(self.size_n):
             for j in range(self.size_n):
                 yield torch.dot(self.V1[i, :], self.V2[:, j])
@@ -151,7 +153,7 @@ class FeatherNet(nn.Module):
     def register_inter_hooks(self):
         prehooks, posthooks = [], []
         for name, module in self.get_WorB_modules():
-            load_layer = LoadLayer(name, module, self.V)
+            load_layer = LoadLayer(name, module, self.V_iter)
             unload_layer = UnloadLayer(name, module)
             prehook = module.register_forward_pre_hook(load_layer)
             posthook = module.register_forward_hook(unload_layer)
@@ -165,18 +167,13 @@ class FeatherNet(nn.Module):
         self.prehook_outer = prehook
 
     def unregister_hooks(self, hooks):
-        assert hooks is not None
-        for hook in hooks:
-            hook.remove()
-
-    def get_modules(self):
-        for module in self.modules():
-            if isinstance(module, self.exclude):
-                continue
+        if hooks is not None:
+            for hook in hooks:
+                hook.remove()
 
     def unregister_params(self) -> None:
         """Delete params, set attributes as Tensors of prior data,
-        register scaler params"""
+        register new params to scale weights and biases"""
         # fan_in will fail on BatchNorm2d.weight
         for name, module, kind in self.get_WandB_modules():
             try:
@@ -195,7 +192,11 @@ class FeatherNet(nn.Module):
                 module.register_parameter(
                     kind + "_p", Parameter(torch.Tensor([scaler]))
                 )
-                # print( "Parameter unregistered, assigned to type Tensor: {}".format( name + "." + kind))
+                print(
+                    "Parameter unregistered, assigned to type Tensor: {}".format(
+                        name + "." + kind
+                    )
+                )
             except KeyError:
                 print(
                     "{} is already registered as {}".format(
@@ -216,23 +217,26 @@ class FeatherNet(nn.Module):
         return out
 
     def eval(self, *args, **kwargs):
-        """Update weights and biases from final-most batch after training"""
-        # Add forward hooks
-        self.register_inter_hooks()
-        self.register_outer_hooks()
-
-        self.WandBtoV()
+        """Update weights and biases from final-most batch after training.
+        Calls `self.train(False)`"""
         return nn.Module.eval(self, *args, **kwargs)
 
-    def train(self, *args, **kwargs):
-        """Update weights and biases from final-most batch after training"""
+    def train(self, mode: bool = True):
+        """Remove forward hooks, load weights and biases.
+        `self.eval()` calls self.train(False)"""
         # Remove forward hooks
-        self.unregister_hooks(self.prehooks)
-        self.unregister_hooks(self.posthooks)
-        self.unregister_hooks(self.prehook_outer)
-
-        self.WandBtoV()
-        return nn.Module.eval(self, *args, **kwargs)
+        if mode:
+            self.unregister_hooks(self.prehooks)
+            self.unregister_hooks(self.posthooks)
+            self.unregister_hooks(self.prehook_outer)
+            self.WandBtoV()
+        else:
+            # Clear V weight matrix
+            self.V = None
+            # Add forward hooks
+            self.register_inter_hooks()
+            self.register_outer_hooks()
+        return nn.Module.train(self, mode)
 
     def forward(self, *args, **kwargs):
         if self.training:
@@ -259,15 +263,12 @@ def main():
 
     def res_test():
         x = torch.randn([1, 3, 32, 32])
+        x_20 = torch.randn([20, 3, 32, 32])
         rmodel = ResNet(ResidualBlock, [2, 2, 2]).to(device)
         frmodel = FeatherNet(rmodel, exclude=(nn.BatchNorm2d), compress=0.8).to(device)
-        start = timer()
-        # 692 s over 100 images
-        for _ in range(100):
-            frmodel(x)
-        end = timer()
-        print(end - start)
-        exit()
+        frmodel(x_20)
+        frmodel.eval()
+        frmodel(x)
 
     res_test()
 
