@@ -9,7 +9,8 @@ from timeit import default_timer as timer
 
 
 class LoadLayer:
-    """Forward prehook for inner layers. Load weights from V, calculating on the fly"""
+    """Forward prehook for inner layers. Load weights and biases from V, calculating on
+    the fly. Must be as fast as possible"""
 
     def __init__(self, name, module, V_iter):
         self.module = module
@@ -38,22 +39,14 @@ class LoadLayer:
                 module.bias = b.reshape(self.b_size)
 
 
-class UnloadLayer:
-    """Forward hook for inner layers. Note, could turn into function"""
-
-    def __init__(self, name, module):
-        self.module = module
-        self.name = name
-
-    def __call__(self, module, inputs, outputs):
-        print("posthook activated: {} {}".format(self.name, self.module))
-        module.weight = None
-        module.bias = None
+def unload_layer(module, inputs, outputs):
+    """Forward hook for inner layers. Unloads weights and biases for given layer"""
+    module.weight = None
+    module.bias = None
 
 
-def construct_V(module, inputs):
+def reset_V_generator(module, inputs):
     """Forward prehook for outermost FeatherNet layer"""
-    print("Outer prehook activated: {}".format(module.V_iter[0]))
     module.V_iter[0] = module.V_generator()
 
 
@@ -153,18 +146,17 @@ class FeatherNet(nn.Module):
     def register_inter_hooks(self):
         prehooks, posthooks = [], []
         for name, module in self.get_WorB_modules():
-            load_layer = LoadLayer(name, module, self.V_iter)
-            unload_layer = UnloadLayer(name, module)
-            prehook = module.register_forward_pre_hook(load_layer)
-            posthook = module.register_forward_hook(unload_layer)
-            prehooks.append(prehook)
-            posthooks.append(posthook)
+            prehook_callable = LoadLayer(name, module, self.V_iter)
+            prehook_handle = module.register_forward_pre_hook(prehook_callable)
+            posthook_handle = module.register_forward_hook(unload_layer)
+            prehooks.append(prehook_handle)
+            posthooks.append(posthook_handle)
         self.prehooks = prehooks
         self.posthooks = posthooks
 
     def register_outer_hooks(self):
-        prehook = self.register_forward_pre_hook(construct_V)
-        self.prehook_outer = prehook
+        prehook_handle = self.register_forward_pre_hook(reset_V_generator)
+        self.prehook_outer = prehook_handle
 
     def unregister_hooks(self, hooks):
         if hooks is not None:
