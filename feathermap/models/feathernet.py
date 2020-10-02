@@ -62,16 +62,28 @@ class FeatherNet(nn.Module):
     ) -> None:
         super().__init__()
         self.module = copy.deepcopy(module) if clone else module
-        self.compress = compress
         self.exclude = exclude
         self.prehooks = None
         self.posthooks = None
         self.prehook_outer = None
 
+        # Check compression range
+        self.max_compress = self.get_max_compression()
+        if compress < self.max_compress:
+            print(
+                (
+                    "Due to streaming layer weight allocation, cannot compress beyond {:.4f}."
+                    + "Setting compression to {:.4f}"
+                ).format(self.max_compress, self.max_compress)
+            )
+            self.compress = self.max_compress
+        else:
+            self.compress = compress
+
         # Unregister module Parameters, create scaler attributes
         self.unregister_params()
 
-        self.size_n = ceil(sqrt(self.num_WandB()))
+        self.size_n = ceil(sqrt(self.get_num_WandB()))
         self.size_m = ceil((self.compress * self.size_n) / 2)
         self.V1 = Parameter(torch.Tensor(self.size_n, self.size_m))
         self.V2 = Parameter(torch.Tensor(self.size_m, self.size_n))
@@ -106,7 +118,30 @@ class FeatherNet(nn.Module):
             setattr(module, kind, scaler * v_new)
             i += j
 
-    def num_WandB(self) -> int:
+    def get_max_compression(self):
+        """Calculate maximum compression rate based on largest layer size"""
+        max_layer_size, _ = self.get_max_num_WandB()
+        return max_layer_size / self.get_num_WandB()
+
+    def get_max_num_WandB(self):
+        """Return size of largest layer's weights + biases"""
+        w, b, size = 0, 0, 0
+        layer = None
+        for name, module in self.get_WorB_modules():
+            if module.bias is not None:
+                b = module.bias.numel()
+            else:
+                b = 0
+            if module.weight is not None:
+                w = module.weight.numel()
+            else:
+                w = 0
+            if w + b > size:
+                size = w + b
+                layer = module
+        return size, layer
+
+    def get_num_WandB(self) -> int:
         """Return total number of weights and biases"""
         return sum(v.numel() for name, v in self.get_WandB())
 
@@ -115,7 +150,8 @@ class FeatherNet(nn.Module):
             yield name + "." + kind, getattr(module, kind)
 
     def get_WandB_modules(self) -> Iterator[Tuple[str, nn.Module, str]]:
-        """Helper function to return weight and bias modules in order"""
+        """Helper function to return weight and bias modules in order.
+        Adheres to `self.exclusion` list"""
         for name, module in self.named_modules():
             try:
                 if isinstance(module, self.exclude):
@@ -127,8 +163,9 @@ class FeatherNet(nn.Module):
             except nn.modules.module.ModuleAttributeError:
                 pass
 
-    def get_WorB_modules(self) -> Iterator[Tuple[str, nn.Module, str]]:
-        """Helper function to return weight and bias modules in order"""
+    def get_WorB_modules(self) -> Iterator[Tuple[str, nn.Module]]:
+        """Helper function to return weight or bias modules in order
+        Adheres to `self.exclusion` list"""
         for name, module in self.named_modules():
             try:
                 if isinstance(module, (self.exclude, FeatherNet)):
@@ -242,7 +279,7 @@ def main():
         lmodel = nn.Linear(2, 4).to(device)
         flmodel = FeatherNet(lmodel, compress=0.5)
         flmodel.WandBtoV()
-        print(flmodel.num_WandB(), flmodel.size_n, flmodel.size_m)
+        print(flmodel.get_num_WandB(), flmodel.size_n, flmodel.size_m)
         print("V1: {}".format(flmodel.V1))
         print("V2: {}".format(flmodel.V2))
         print("V: {}".format(flmodel.V))
@@ -253,10 +290,11 @@ def main():
         x = torch.randn([1, 3, 32, 32])
         x_20 = torch.randn([20, 3, 32, 32])
         rmodel = ResNet(ResidualBlock, [2, 2, 2]).to(device)
-        frmodel = FeatherNet(rmodel, exclude=(nn.BatchNorm2d), compress=0.8).to(device)
-        frmodel(x_20)
-        frmodel.eval()
-        frmodel(x)
+        frmodel = FeatherNet(rmodel, exclude=(nn.BatchNorm2d), compress=0.1).to(device)
+        layer, size = frmodel.get_max_num_WandB()
+        # fmt: off
+        import ipdb,os; ipdb.set_trace(context=30)  # noqa
+        # fmt: on
 
     res_test()
 
