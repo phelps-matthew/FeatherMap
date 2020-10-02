@@ -216,11 +216,6 @@ class FeatherNet(nn.Module):
         self.WandBtoV()
         return out
 
-    def eval(self, *args, **kwargs):
-        """Update weights and biases from final-most batch after training.
-        Calls `self.train(False)`"""
-        return nn.Module.eval(self, *args, **kwargs)
-
     def train(self, mode: bool = True):
         """Remove forward hooks, load weights and biases.
         `self.eval()` calls self.train(False)"""
@@ -230,6 +225,7 @@ class FeatherNet(nn.Module):
             self.unregister_hooks(self.posthooks)
             self.unregister_hooks(self.prehook_outer)
             self.WandBtoV()
+        # eval mode
         else:
             # Clear V weight matrix
             self.V = None
