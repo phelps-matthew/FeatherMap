@@ -26,17 +26,17 @@ class LoadLayer:
             self.b_p = module.bias_p  # bias scaler
 
     def __call__(self, module, inputs):
-        print("prehook activated: {} {}".format(self.name, self.module))
+        # print("prehook activated: {} {}".format(self.name, self.module))
         w = torch.empty(self.w_num)
         V = self.V_iter[0]
         for i in range(self.w_num):
             w[i] = self.w_p * next(V)
-            module.weight = w.reshape(self.w_size)
+        module.weight = w.reshape(self.w_size)
         if self.bias:
             b = torch.empty(self.b_num)
             for i in range(self.b_num):
                 b[i] = self.b_p * next(V)
-                module.bias = b.reshape(self.b_size)
+            module.bias = b.reshape(self.b_size)
 
 
 def unload_layer(module, inputs, outputs):
@@ -66,6 +66,7 @@ class FeatherNet(nn.Module):
         self.prehooks = None
         self.posthooks = None
         self.prehook_outer = None
+        self.prehook_callables = None
 
         # Check compression range
         self.max_compress = self.get_max_compression()
@@ -181,24 +182,33 @@ class FeatherNet(nn.Module):
                 yield torch.dot(self.V1[i, :], self.V2[:, j])
 
     def register_inter_hooks(self):
-        prehooks, posthooks = [], []
+        prehooks, posthooks, prehook_callables = [], [], []
         for name, module in self.get_WorB_modules():
             prehook_callable = LoadLayer(name, module, self.V_iter)
             prehook_handle = module.register_forward_pre_hook(prehook_callable)
             posthook_handle = module.register_forward_hook(unload_layer)
             prehooks.append(prehook_handle)
             posthooks.append(posthook_handle)
+            prehook_callables.append(prehook_callable)
         self.prehooks = prehooks
         self.posthooks = posthooks
+        self.prehook_callables = prehook_callables
 
     def register_outer_hooks(self):
         prehook_handle = self.register_forward_pre_hook(reset_V_generator)
-        self.prehook_outer = prehook_handle
+        self.prehook_outer = [prehook_handle]
 
     def unregister_hooks(self, hooks):
+        # Remove hooks
         if hooks is not None:
             for hook in hooks:
                 hook.remove()
+        # Set weights and biases to empty (non None) tensors; necessary for training mode
+        if hooks is self.prehooks:
+            for layer_obj in self.prehook_callables:
+                layer_obj.module.weight = torch.empty(layer_obj.w_size)
+                if layer_obj.bias:
+                    layer_obj.module.bias = torch.empty(layer_obj.b_size)
 
     def unregister_params(self) -> None:
         """Delete params, set attributes as Tensors of prior data,
@@ -288,13 +298,30 @@ def main():
 
     def res_test():
         x = torch.randn([1, 3, 32, 32])
-        x_20 = torch.randn([20, 3, 32, 32])
+        x_20 = torch.randn([100, 3, 32, 32])
         rmodel = ResNet(ResidualBlock, [2, 2, 2]).to(device)
         frmodel = FeatherNet(rmodel, exclude=(nn.BatchNorm2d), compress=0.1).to(device)
-        layer, size = frmodel.get_max_num_WandB()
-        # fmt: off
-        import ipdb,os; ipdb.set_trace(context=30)  # noqa
-        # fmt: on
+        start = timer()
+        frmodel.eval()
+        with torch.no_grad():
+            for i in range(10):
+                frmodel(x)
+        end = timer()
+        print(end - start)
+        start = timer()
+        for i in range(10):
+            frmodel(x)
+        end = timer()
+        print(end - start)
+        start = timer()
+        frmodel.train()
+        #print(*list(frmodel.get_WandB_modules()))
+
+        with torch.no_grad():
+            for i in range(10):
+                frmodel(x)
+        end = timer()
+        print(end - start)
 
     res_test()
 
