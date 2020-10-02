@@ -70,6 +70,9 @@ class FeatherNet(nn.Module):
         self.module = copy.deepcopy(module) if clone else module
         self.compress = compress
         self.exclude = exclude
+        self.prehooks = None
+        self.posthooks = None
+        self.prehook_outer = None
 
         # Unregister module Parameters, create scaler attributes
         self.unregister_params()
@@ -79,17 +82,11 @@ class FeatherNet(nn.Module):
         self.V1 = Parameter(torch.Tensor(self.size_n, self.size_m))
         self.V2 = Parameter(torch.Tensor(self.size_m, self.size_n))
 
-        self.prehooks = None
-        self.posthooks = None
-        self.prehook_outer = None
-
-        # Noramlize V1 and V2
+        # Normalize V1 and V2
         self.norm_V()
 
         # Use list as pointer
         self.V = [self.V_iter()]
-        self.register_inter_hooks()
-        self.register_outer_hooks()
 
     def norm_V(self):
         """Currently implemented only for uniform intializations"""
@@ -156,16 +153,21 @@ class FeatherNet(nn.Module):
         for name, module in self.get_WorB_modules():
             load_layer = LoadLayer(name, module, self.V)
             unload_layer = UnloadLayer(name, module)
-            module.register_forward_pre_hook(load_layer)
-            module.register_forward_hook(unload_layer)
-            prehooks.append(load_layer)
-            posthooks.append(load_layer)
+            prehook = module.register_forward_pre_hook(load_layer)
+            posthook = module.register_forward_hook(unload_layer)
+            prehooks.append(prehook)
+            posthooks.append(posthook)
         self.prehooks = prehooks
         self.posthooks = posthooks
 
     def register_outer_hooks(self):
         prehook = self.register_forward_pre_hook(construct_V)
         self.prehook_outer = prehook
+
+    def unregister_hooks(self, hooks):
+        assert hooks is not None
+        for hook in hooks:
+            hook.remove()
 
     def get_modules(self):
         for module in self.modules():
@@ -215,13 +217,26 @@ class FeatherNet(nn.Module):
 
     def eval(self, *args, **kwargs):
         """Update weights and biases from final-most batch after training"""
+        # Add forward hooks
+        self.register_inter_hooks()
+        self.register_outer_hooks()
+
+        self.WandBtoV()
+        return nn.Module.eval(self, *args, **kwargs)
+
+    def train(self, *args, **kwargs):
+        """Update weights and biases from final-most batch after training"""
+        # Remove forward hooks
+        self.unregister_hooks(self.prehooks)
+        self.unregister_hooks(self.posthooks)
+        self.unregister_hooks(self.prehook_outer)
+
         self.WandBtoV()
         return nn.Module.eval(self, *args, **kwargs)
 
     def forward(self, *args, **kwargs):
         if self.training:
-            #self.WandBtoV()
-            pass
+            self.WandBtoV()
         return self.module(*args, **kwargs)
 
 
@@ -251,7 +266,7 @@ def main():
         for _ in range(100):
             frmodel(x)
         end = timer()
-        print(end-start)
+        print(end - start)
         exit()
 
     res_test()

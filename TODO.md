@@ -8,10 +8,16 @@
 - [X] Recheck initialization method
 - [X] Handle BatchNorm2d `fan_in`
 - [X] Handle train() and eval() appropriately
-- [X] argprase for jobs?
+- [X] argparse for jobs
 - [X] Test ResNet
 - [X] Docker containerization locally
 - [X] Add logging for training times and accuracy
+- [X] Add validation dataloader
+- [ ] Compute weights 'on the fly' from variable pool
+	- [X] forward() prehook and posthook
+	- [ ] global method
+	- [ ] create train/eval switch, possibly serialized flag
+		- [ ] Obtain minimum compress
 - [ ] Fine-tuning based on param size
 	- [ ] Validation Set
 	- [ ] Early stopping w/ checkpoints
