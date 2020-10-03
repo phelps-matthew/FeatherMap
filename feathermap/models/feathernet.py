@@ -6,27 +6,41 @@ from typing import Iterator, Tuple
 from math import ceil, sqrt
 import copy
 from timeit import default_timer as timer
+from feathermap.utils import timed
 
 
 class LoadLayer:
     """Forward prehook for inner layers. Load weights and biases from V, calculating on
     the fly. Must be as fast as possible"""
 
-    def __init__(self, name, module, V_iter):
+    def __init__(self, name, module, V_iter, size_n, running_len):
         self.module = module
         self.name = name
         self.V_iter = V_iter
+        self.running_len = running_len
+        self.size_n = size_n
         self.w_size = module.weight.size()
         self.w_num = module.weight.numel()
         self.w_p = module.weight_p  # weight scaler
+        self.num = self.w_num
         self.bias = module.bias is not None
         if self.bias:
             self.b_size = module.bias.size()
             self.b_num = module.bias.numel()
+            self.num += self.b_num
             self.b_p = module.bias_p  # bias scaler
 
+        self.idx_range = self.get_index_range()
+
+    def get_index_range(self):
+        offset = self.running_len + 1
+        row_start, col_start = divmod(offset, self.size_n)
+        row_end, col_end = divmod(offset + self.num - 1, self.size_n)
+        return (row_start, col_start, row_end, col_end)
+
     def __call__(self, module, inputs):
-        # print("prehook activated: {} {}".format(self.name, self.module))
+        print("prehook activated: {} {}".format(self.name, self.module))
+        print(self.idx_range)
         w = torch.empty(self.w_num)
         V = self.V_iter[0]
         for i in range(self.w_num):
@@ -37,6 +51,47 @@ class LoadLayer:
             for i in range(self.b_num):
                 b[i] = self.b_p * next(V)
             module.bias = b.reshape(self.b_size)
+
+    def __called__(self, module, inputs):
+        # print("prehook activated: {} {}".format(self.name, self.module))
+        w = torch.ones(self.w_num)
+        V = self.V_iter[0]
+        module.weight = w.map_(w, self.myV).reshape(self.w_size)
+        if self.bias:
+            b = torch.ones(self.b_num)
+            module.bias = b.map_(b, self.myV).reshape(self.b_size)
+
+    def __call4__(self, module, inputs):
+        # print("prehook activated: {} {}".format(self.name, self.module))
+        w = torch.empty(self.w_num)
+        module.weight = w.reshape(self.w_size)
+        if self.bias:
+            b = torch.empty(self.b_num)
+            module.bias = b.reshape(self.b_size)
+
+    def __call3__(self, module, inputs):
+        # print("prehook activated: {} {}".format(self.name, self.module))
+        w = torch.empty(self.w_num)
+        for i in range(self.w_num):
+            w[i] = self.w_p * torch.ones(1)
+        module.weight = w.reshape(self.w_size)
+        if self.bias:
+            b = torch.empty(self.b_num)
+            for i in range(self.b_num):
+                b[i] = self.b_p * torch.ones(1)
+            module.bias = b.reshape(self.b_size)
+
+    def __called1__(self, module, inputs):
+        # print("prehook activated: {} {}".format(self.name, self.module))
+        module.weight = torch.randn(self.w_size)
+        if self.bias:
+            module.bias = torch.randn(self.b_size)
+
+    def __called2__(self, module, inputs):
+        # print("prehook activated: {} {}".format(self.name, self.module))
+        module.weight = torch.empty(self.w_size)
+        if self.bias:
+            module.bias = torch.empty(self.b_size)
 
 
 def unload_layer(module, inputs, outputs):
@@ -59,9 +114,11 @@ class FeatherNet(nn.Module):
         compress: float = 1,
         exclude: tuple = (),
         clone: bool = True,
+        verbose: bool = False,
     ) -> None:
         super().__init__()
         self.module = copy.deepcopy(module) if clone else module
+        self.verbose = verbose
         self.exclude = exclude
         self.prehooks = None
         self.posthooks = None
@@ -183,13 +240,23 @@ class FeatherNet(nn.Module):
 
     def register_inter_hooks(self):
         prehooks, posthooks, prehook_callables = [], [], []
+        running_len = -1
         for name, module in self.get_WorB_modules():
-            prehook_callable = LoadLayer(name, module, self.V_iter)
+            # Create callable prehook object; see LoadLayer; update running V.view(-1, 1) index
+            prehook_callable = LoadLayer(
+                name, module, self.V_iter, self.size_n, running_len
+            )
+            running_len += prehook_callable.num
+
+            # Register hooks
             prehook_handle = module.register_forward_pre_hook(prehook_callable)
             posthook_handle = module.register_forward_hook(unload_layer)
+
+            # Collect removable handles
             prehooks.append(prehook_handle)
             posthooks.append(posthook_handle)
             prehook_callables.append(prehook_callable)
+        # Pass handles into attributes
         self.prehooks = prehooks
         self.posthooks = posthooks
         self.prehook_callables = prehook_callables
@@ -203,12 +270,12 @@ class FeatherNet(nn.Module):
         if hooks is not None:
             for hook in hooks:
                 hook.remove()
-        # Set weights and biases to empty (non None) tensors; necessary for training mode
-        if hooks is self.prehooks:
-            for layer_obj in self.prehook_callables:
-                layer_obj.module.weight = torch.empty(layer_obj.w_size)
-                if layer_obj.bias:
-                    layer_obj.module.bias = torch.empty(layer_obj.b_size)
+            # Set weights and biases to empty (non None) tensors; necessary for training mode
+            if hooks is self.prehooks:
+                for layer_obj in self.prehook_callables:
+                    layer_obj.module.weight = torch.empty(layer_obj.w_size)
+                    if layer_obj.bias:
+                        layer_obj.module.bias = torch.empty(layer_obj.b_size)
 
     def unregister_params(self) -> None:
         """Delete params, set attributes as Tensors of prior data,
@@ -231,11 +298,12 @@ class FeatherNet(nn.Module):
                 module.register_parameter(
                     kind + "_p", Parameter(torch.Tensor([scaler]))
                 )
-                print(
-                    "Parameter unregistered, assigned to type Tensor: {}".format(
-                        name + "." + kind
+                if self.verbose:
+                    print(
+                        "Parameter unregistered, assigned to type Tensor: {}".format(
+                            name + "." + kind
+                        )
                     )
-                )
             except KeyError:
                 print(
                     "{} is already registered as {}".format(
@@ -297,31 +365,26 @@ def main():
         [print(name, v) for name, v in flmodel.named_parameters()]
 
     def res_test():
-        x = torch.randn([1, 3, 32, 32])
-        x_20 = torch.randn([100, 3, 32, 32])
-        rmodel = ResNet(ResidualBlock, [2, 2, 2]).to(device)
-        frmodel = FeatherNet(rmodel, exclude=(nn.BatchNorm2d), compress=0.1).to(device)
-        start = timer()
-        frmodel.eval()
-        with torch.no_grad():
-            for i in range(10):
-                frmodel(x)
-        end = timer()
-        print(end - start)
-        start = timer()
-        for i in range(10):
-            frmodel(x)
-        end = timer()
-        print(end - start)
-        start = timer()
-        frmodel.train()
-        #print(*list(frmodel.get_WandB_modules()))
+        def pic_gen():
+            for i in range(100):
+                yield torch.randn([1, 3, 32, 32])
 
+        rmodel = ResNet(ResidualBlock, [2, 2, 2]).to(device)
+        frmodel = FeatherNet(rmodel, exclude=(nn.BatchNorm2d), compress=1.0).to(device)
+        for name, module, kind in frmodel.get_WandB_modules():
+            p = getattr(module, kind)
+            print(name, kind, p.size())
+        print("-" * 20)
+        print("n = {}".format(frmodel.size_n))
+        frmodel.eval()
+        frmodel(torch.rand(1, 3, 32, 32))
+        exit()
+        start = timer()
         with torch.no_grad():
-            for i in range(10):
+            for x in pic_gen():
                 frmodel(x)
         end = timer()
-        print(end - start)
+        print(100 / (end - start))
 
     res_test()
 
