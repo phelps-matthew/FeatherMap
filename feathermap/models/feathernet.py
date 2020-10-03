@@ -13,11 +13,13 @@ class LoadLayer:
     """Forward prehook for inner layers. Load weights and biases from V, calculating on
     the fly. Must be as fast as possible"""
 
-    def __init__(self, name, module, V_iter, size_n, running_len):
+    def __init__(self, name, module, V_iter, V1, V2, size_n, offset):
         self.module = module
         self.name = name
         self.V_iter = V_iter
-        self.running_len = running_len
+        self.V1 = V1
+        self.V2 = V2
+        self.offset = offset
         self.size_n = size_n
         self.w_size = module.weight.size()
         self.w_num = module.weight.numel()
@@ -30,10 +32,38 @@ class LoadLayer:
             self.num += self.b_num
             self.b_p = module.bias_p  # bias scaler
 
-        self.idx_range = self.get_index_range()
+    def get_idx_splits(self):
+        """Obeys index slicing"""
+        row_start, col_start, row_end, col_end = self.idx_range()
+        row_start_full, row_end_full = False, False
+        V1 = self.V1
+        V2 = self.V2
+        if col_start == 0:
+            row_start_full = True
+        if col_end == self.size_n - 1:
+            row_end_full = True
+        if row_start_full and row_end_full:
+            return (V1[row_start : row_end + 1, :], V2[:])
+        if row_start_full:
+            # at least one additional full row, no full end
+            if row_end - row_start >= 2:
+                return (V1[row_start:row_end, :], V2[:]), ( V1[row_end, :], V2[:, col_end],)
+            else:
+                return (V1[row_start, :], V2[:]), (V1[row_end, :], V2[:, col_end])
+        if row_end_full:
+            # at least one additional full row, no full start
+            if row_end - row_start >= 2:
+                return (V1[row_start, :], V2[:, col_end]), ( V1[row_start + 1 : row_end + 1, :], V2[:],)
+            else:
+                return (V1[row_start, :], V2[:, col_start]), ( V1[row_end - 1 : row_end + 1, :], V2[:],)
+        if row_end - row_start >= 2:
+            # at least one full row
+            return ( (V1[row_start, :], V2[:, col_start]), (V1[row_start + 1 : row_end, :], V2[:]), (V1[row_end, :], V2[:, col_end]),)
+        else:
+            return (V1[row_start, :], V2[:, col_start]), ( V1[row_end, :], V2[:, col_end],)
 
     def get_index_range(self):
-        offset = self.running_len + 1
+        offset = self.offset + 1
         row_start, col_start = divmod(offset, self.size_n)
         row_end, col_end = divmod(offset + self.num - 1, self.size_n)
         return (row_start, col_start, row_end, col_end)
@@ -240,13 +270,13 @@ class FeatherNet(nn.Module):
 
     def register_inter_hooks(self):
         prehooks, posthooks, prehook_callables = [], [], []
-        running_len = -1
+        offset = -1
         for name, module in self.get_WorB_modules():
             # Create callable prehook object; see LoadLayer; update running V.view(-1, 1) index
             prehook_callable = LoadLayer(
-                name, module, self.V_iter, self.size_n, running_len
+                name, module, self.V_iter, self.V1, self.V2, self.size_n, offset
             )
-            running_len += prehook_callable.num
+            offset += prehook_callable.num
 
             # Register hooks
             prehook_handle = module.register_forward_pre_hook(prehook_callable)
