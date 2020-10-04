@@ -145,7 +145,6 @@ class FeatherNet(nn.Module):
         self.exclude = exclude
         self.prehooks = None
         self.posthooks = None
-        self.prehook_outer = None
         self.prehook_callables = None
 
         # Check compression range
@@ -337,6 +336,17 @@ class FeatherNet(nn.Module):
         `self.eval()` calls self.train(False)"""
         # Remove forward hooks
         if mode:
+            self.WandBtoV()
+        else:
+            self.WandBtoV()
+
+        return nn.Module.train(self, mode)
+
+    def train_stream(self, mode: bool = True):
+        """Remove forward hooks, load weights and biases.
+        `self.eval()` calls self.train(False)"""
+        # Remove forward hooks
+        if mode:
             self.unregister_hooks(self.prehooks)
             self.unregister_hooks(self.posthooks)
             self.unregister_hooks(self.prehook_outer)
@@ -347,7 +357,6 @@ class FeatherNet(nn.Module):
             self.V = None
             # Add forward hooks
             self.register_inter_hooks()
-        return nn.Module.train(self, mode)
 
     def forward(self, *args, **kwargs):
         if self.training:
@@ -366,8 +375,6 @@ def main():
         flmodel = FeatherNet(lmodel, compress=0.5)
         flmodel.WandBtoV()
         print(flmodel.get_num_WandB(), flmodel.size_n, flmodel.size_m)
-        print("V1: {}".format(flmodel.V1))
-        print("V2: {}".format(flmodel.V2))
         print("V: {}".format(flmodel.V))
         flmodel.WandBtoV()
         [print(name, v) for name, v in flmodel.named_parameters()]
@@ -384,8 +391,6 @@ def main():
             # print(name, kind, p.size())
         # print("-" * 20)
         # print("n = {}".format(frmodel.size_n))
-        frmodel.eval()
-        frmodel(torch.rand(1, 3, 32, 32))
         start = timer()
         with torch.no_grad():
             for x in pic_gen():
