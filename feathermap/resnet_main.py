@@ -18,6 +18,7 @@ import argparse
 from feathermap.data_loader import get_train_valid_loader, get_test_loader
 import numpy as np
 import os
+import pandas as pd
 
 
 @timed
@@ -57,9 +58,8 @@ def train(model, train_loader, valid_loader, epochs, lr, device):
                         epoch + 1, epochs, i + 1, total_step, loss.item()
                     )
                 )
-                losses.append(loss.item())
-                steps.append(i + 1 + total_step * epoch)
-
+        losses.append(loss.item())
+        steps.append(i + 1 + total_step * epoch)
         # Decay learning rate
         if (epoch + 1) % 20 == 0:
             curr_lr /= 3
@@ -133,11 +133,16 @@ def main(args):
     )
 
     # Train, evaluate
-    steps, losses, accuracies = train(model, train_loader, valid_loader, args.epochs, args.lr, DEV)
-    np.savetxt((args.log_dir + "resnet_steps_compress_" + str(args.compress) + ".csv"), steps)
-    np.savetxt((args.log_dir + "resnet_losses_compress_" + str(args.compress) + ".csv"), losses)
-    np.savetxt((args.log_dir + "resnet_accuracies_compress_" + str(args.compress) + ".csv"), accuracies)
+    #steps, losses, accuracies = train(model, train_loader, valid_loader, args.epochs, args.lr, DEV)
+    steps, losses, accuracies = np.random.rand(10), np.random.rand(10), np.random.rand(10)
+    loss_dir = args.log_dir + "resnet_train_compress" + str(args.compress) + ".csv"
+    np.savetxt(loss_dir, (steps, losses, accuracies))
     #evaluate(model, test_loader, DEV)
+    df = pd.read_csv(loss_dir, delimiter=' ')
+    # fmt: off
+    import ipdb; ipdb.set_trace(context=30)  # noqa
+    # fmt: on
+
 
     # Save the model checkpoint
     if args.save_model:
