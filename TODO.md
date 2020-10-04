@@ -15,13 +15,15 @@
 - [X] Add validation dataloader
 - [ ] Compute weights 'on the fly' from variable pool
 	- [X] forward() prehook and posthook
-	- [ ] global method
+	- [X] global method
 	- [ ] create train/eval switch, possibly serialized flag
-		- [ ] Obtain minimum compress
+	- [X] obtain minimum allowable compression
+- [ ] GPU EC2 P3 check
 - [ ] Fine-tuning based on param size
 	- [ ] Validation Set
 	- [ ] Early stopping w/ checkpoints
 	- [ ] Learning rate scheduler?
+	- [ ] MLFlow
 - [ ] Docker on EC2 (no GPU)
 - [ ] Docker on EC2 (GPU)
 - [ ] Find best `num_workers`
@@ -30,3 +32,7 @@
 - [ ] Setup Travis CI
 - [X] Rename papers in ./references
 - [ ] Analyze residual blocks
+- [ ] REST or GraphQL API (or microservice)
+- [ ] Clean up all code, reorganize structure
+- [ ] Create Readme
+- [ ] Sphinx documentation
