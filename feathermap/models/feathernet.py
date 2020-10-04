@@ -126,61 +126,6 @@ class LoadLayer:
             b = torch.rand(self.b_num)
             module.bias = b.reshape(self.b_size)
 
-    def __callog__(self, module, inputs):
-        #print("prehook activated: {} {}".format(self.name, self.module))
-        w = torch.empty(self.w_num)
-        V = self.V_iter[0]
-        for i in range(self.w_num):
-            w[i] = self.w_p * next(V)
-        module.weight = w.reshape(self.w_size)
-        if self.bias:
-            b = torch.empty(self.b_num)
-            for i in range(self.b_num):
-                b[i] = self.b_p * next(V)
-            module.bias = b.reshape(self.b_size)
-
-    def __called__(self, module, inputs):
-        # print("prehook activated: {} {}".format(self.name, self.module))
-        w = torch.ones(self.w_num)
-        V = self.V_iter[0]
-        module.weight = w.map_(w, self.myV).reshape(self.w_size)
-        if self.bias:
-            b = torch.ones(self.b_num)
-            module.bias = b.map_(b, self.myV).reshape(self.b_size)
-
-    def __call4__(self, module, inputs):
-        # print("prehook activated: {} {}".format(self.name, self.module))
-        w = torch.empty(self.w_num)
-        module.weight = w.reshape(self.w_size)
-        if self.bias:
-            b = torch.empty(self.b_num)
-            module.bias = b.reshape(self.b_size)
-
-    def __call3__(self, module, inputs):
-        # print("prehook activated: {} {}".format(self.name, self.module))
-        w = torch.empty(self.w_num)
-        for i in range(self.w_num):
-            w[i] = self.w_p * torch.ones(1)
-        module.weight = w.reshape(self.w_size)
-        if self.bias:
-            b = torch.empty(self.b_num)
-            for i in range(self.b_num):
-                b[i] = self.b_p * torch.ones(1)
-            module.bias = b.reshape(self.b_size)
-
-    def __called1__(self, module, inputs):
-        # print("prehook activated: {} {}".format(self.name, self.module))
-        module.weight = torch.randn(self.w_size)
-        if self.bias:
-            module.bias = torch.randn(self.b_size)
-
-    def __called2__(self, module, inputs):
-        # print("prehook activated: {} {}".format(self.name, self.module))
-        module.weight = torch.empty(self.w_size)
-        if self.bias:
-            module.bias = torch.empty(self.b_size)
-
-
 def unload_layer(module, inputs, outputs):
     """Forward hook for inner layers. Unloads weights and biases for given layer"""
     module.weight = None
@@ -460,15 +405,15 @@ def main():
         frmodel = FeatherNet(rmodel, exclude=(nn.BatchNorm2d), compress=1.0).to(device)
         for name, module, kind in frmodel.get_WandB_modules():
             p = getattr(module, kind)
-            print(name, kind, p.size())
-        print("-" * 20)
-        print("n = {}".format(frmodel.size_n))
+            #print(name, kind, p.size())
+        #print("-" * 20)
+        #print("n = {}".format(frmodel.size_n))
         frmodel.eval()
         frmodel(torch.rand(1, 3, 32, 32))
         start = timer()
         with torch.no_grad():
             for x in pic_gen():
-                frmodel(x)
+                rmodel(x)
         end = timer()
         print(100 / (end - start))
 
