@@ -7,6 +7,7 @@ from math import ceil, sqrt
 import copy
 from timeit import default_timer as timer
 from feathermap.utils import timed
+from itertools import starmap
 
 
 class LoadLayer:
@@ -32,9 +33,22 @@ class LoadLayer:
             self.num += self.b_num
             self.b_p = module.bias_p  # bias scaler
 
+
+        
+        self.ops = self.get_idx_splits()
+
+    def mm_map(self, a, b):
+        return torch.matmul(a, b).view(-1,1)
+
+
+    def get_weights(self):
+        # Initialize
+        w = torch.empty(self.w_num)
+        
+
     def get_idx_splits(self):
         """Obeys index slicing"""
-        row_start, col_start, row_end, col_end = self.idx_range()
+        row_start, col_start, row_end, col_end = self.get_index_range()
         row_start_full, row_end_full = False, False
         V1 = self.V1
         V2 = self.V2
@@ -47,18 +61,28 @@ class LoadLayer:
         if row_start_full:
             # at least one additional full row, no full end
             if row_end - row_start >= 2:
-                return (V1[row_start:row_end, :], V2[:]), ( V1[row_end, :], V2[:, col_end],)
+                return (V1[row_start:row_end, :], V2[:]), ( V1[row_end, :], V2[:, :col_end+1],)
+            # spans two rows, start row is full
+            elif row_end - row_start == 1:
+                return (V1[row_start, :], V2[:]), (V1[row_end, :], V2[:, :col_end+1])
+            # spans single row
             else:
-                return (V1[row_start, :], V2[:]), (V1[row_end, :], V2[:, col_end])
+                return (V1[row_start, :], V2[:,:col_end+1])
         if row_end_full:
             # at least one additional full row, no full start
             if row_end - row_start >= 2:
-                return (V1[row_start, :], V2[:, col_end]), ( V1[row_start + 1 : row_end + 1, :], V2[:],)
+                return (V1[row_start, :], V2[:, col_start:]), ( V1[row_start + 1 : row_end + 1, :], V2[:],)
+            # spans two rows, end row is full
+            elif row_end - row_start == 1:
+                return (V1[row_start, :], V2[:, col_start:]), (V1[row_end, :], V2[:],)
             else:
-                return (V1[row_start, :], V2[:, col_start]), ( V1[row_end - 1 : row_end + 1, :], V2[:],)
+                return (V1[row_start, :], V2[:,col_start:])
         if row_end - row_start >= 2:
             # at least one full row
-            return ( (V1[row_start, :], V2[:, col_start]), (V1[row_start + 1 : row_end, :], V2[:]), (V1[row_end, :], V2[:, col_end]),)
+            return ( (V1[row_start, :], V2[:, col_start:]), (V1[row_start + 1 : row_end, :], V2[:]), (V1[row_end, :], V2[:, :col_end+1]),)
+        elif row_end - row_start == 1:
+            # spans two rows, both incomplete
+            return (V1[row_start, :], V2[:, col_start:]), (V1[row_end, :], V2[:, :col_end+1])
         else:
             return (V1[row_start, :], V2[:, col_start]), ( V1[row_end, :], V2[:, col_end],)
 
@@ -70,7 +94,16 @@ class LoadLayer:
 
     def __call__(self, module, inputs):
         print("prehook activated: {} {}".format(self.name, self.module))
-        print(self.idx_range)
+        # fmt: off
+        import ipdb,os; ipdb.set_trace(context=30)  # noqa
+        # fmt: on
+        w = torch.cat(tuple(starmap(self.mm_map, self.ops)))
+        if self.bias:
+            b = torch.rand(self.b_num)
+            module.bias = b.reshape(self.b_size)
+
+    def __callog__(self, module, inputs):
+        print("prehook activated: {} {}".format(self.name, self.module))
         w = torch.empty(self.w_num)
         V = self.V_iter[0]
         for i in range(self.w_num):
