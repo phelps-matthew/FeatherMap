@@ -33,18 +33,18 @@ class LoadLayer:
             self.num += self.b_num
             self.b_p = module.bias_p  # bias scaler
 
+        self.ops = self.get_list_ops()
 
-        
-        self.ops = self.get_idx_splits()
+    def get_list_ops(self):
+        ops = self.get_idx_splits()
+        return [ops[k] for k in ops]
 
-    def mm_map(self, a, b):
-        return torch.matmul(a, b).view(-1,1)
-
+    def mm_map(self, a):
+        return torch.matmul(*a).view(-1, 1)
 
     def get_weights(self):
         # Initialize
         w = torch.empty(self.w_num)
-        
 
     def get_idx_splits(self):
         """Obeys index slicing"""
@@ -57,53 +57,77 @@ class LoadLayer:
         if col_end == self.size_n - 1:
             row_end_full = True
         if row_start_full and row_end_full:
-            return (V1[row_start : row_end + 1, :], V2[:])
+            return {"start": (V1[row_start : row_end + 1, :], V2[:])}
         if row_start_full:
             # at least one additional full row, no full end
             if row_end - row_start >= 2:
-                return (V1[row_start:row_end, :], V2[:]), ( V1[row_end, :], V2[:, :col_end+1],)
+                return {
+                    "start": (V1[row_start:row_end, :], V2[:]),
+                    "end": (V1[row_end, :], V2[:, : col_end + 1]),
+                }
             # spans two rows, start row is full
             elif row_end - row_start == 1:
-                return (V1[row_start, :], V2[:]), (V1[row_end, :], V2[:, :col_end+1])
+                return {
+                    "start": (V1[row_start, :], V2[:]),
+                    "end": (V1[row_end, :], V2[:, : col_end + 1]),
+                }
             # spans single row
             else:
-                return (V1[row_start, :], V2[:,:col_end+1])
+                return {"start": (V1[row_start, :], V2[:, : col_end + 1])}
         if row_end_full:
             # at least one additional full row, no full start
             if row_end - row_start >= 2:
-                return (V1[row_start, :], V2[:, col_start:]), ( V1[row_start + 1 : row_end + 1, :], V2[:],)
+                return {
+                    "start": (V1[row_start, :], V2[:, col_start:]),
+                    "end": (V1[row_start + 1 : row_end + 1, :], V2[:]),
+                }
             # spans two rows, end row is full
             elif row_end - row_start == 1:
-                return (V1[row_start, :], V2[:, col_start:]), (V1[row_end, :], V2[:],)
+                return {
+                    "start": (V1[row_start, :], V2[:, col_start:]),
+                    "end": (V1[row_end, :], V2[:]),
+                }
             else:
-                return (V1[row_start, :], V2[:,col_start:])
+                return {"start": (V1[row_start, :], V2[:, col_start:])}
         if row_end - row_start >= 2:
             # at least one full row
-            return ( (V1[row_start, :], V2[:, col_start:]), (V1[row_start + 1 : row_end, :], V2[:]), (V1[row_end, :], V2[:, :col_end+1]),)
+            return {
+                "start": (V1[row_start, :], V2[:, col_start:]),
+                "mid": (V1[row_start + 1 : row_end, :], V2[:]),
+                "end": (V1[row_end, :], V2[:, : col_end + 1]),
+            }
         elif row_end - row_start == 1:
             # spans two rows, both incomplete
-            return (V1[row_start, :], V2[:, col_start:]), (V1[row_end, :], V2[:, :col_end+1])
+            return {
+                "start": (V1[row_start, :], V2[:, col_start:]),
+                "end": (V1[row_end, :], V2[:, : col_end + 1]),
+            }
         else:
-            return (V1[row_start, :], V2[:, col_start]), ( V1[row_end, :], V2[:, col_end],)
+            return {
+                "start": (V1[row_start, :], V2[:, col_start]),
+                "end": (V1[row_end, :], V2[:, col_end]),
+            }
 
     def get_index_range(self):
         offset = self.offset + 1
         row_start, col_start = divmod(offset, self.size_n)
-        row_end, col_end = divmod(offset + self.num - 1, self.size_n)
+        row_end, col_end = divmod(offset + self.w_num - 1, self.size_n)
         return (row_start, col_start, row_end, col_end)
 
     def __call__(self, module, inputs):
-        print("prehook activated: {} {}".format(self.name, self.module))
-        # fmt: off
-        import ipdb,os; ipdb.set_trace(context=30)  # noqa
-        # fmt: on
-        w = torch.cat(tuple(starmap(self.mm_map, self.ops)))
+        #print("prehook activated: {} {}".format(self.name, self.module))
+        if len(self.ops) == 1:
+            module.weight = self.mm_map(*self.ops).reshape(self.w_size)
+        else:
+            a = tuple(map(self.mm_map, self.ops))
+            module.weight = torch.cat(a).reshape(self.w_size)
+
         if self.bias:
             b = torch.rand(self.b_num)
             module.bias = b.reshape(self.b_size)
 
     def __callog__(self, module, inputs):
-        print("prehook activated: {} {}".format(self.name, self.module))
+        #print("prehook activated: {} {}".format(self.name, self.module))
         w = torch.empty(self.w_num)
         V = self.V_iter[0]
         for i in range(self.w_num):
@@ -309,7 +333,7 @@ class FeatherNet(nn.Module):
             prehook_callable = LoadLayer(
                 name, module, self.V_iter, self.V1, self.V2, self.size_n, offset
             )
-            offset += prehook_callable.num
+            offset += prehook_callable.w_num
 
             # Register hooks
             prehook_handle = module.register_forward_pre_hook(prehook_callable)
@@ -441,7 +465,6 @@ def main():
         print("n = {}".format(frmodel.size_n))
         frmodel.eval()
         frmodel(torch.rand(1, 3, 32, 32))
-        exit()
         start = timer()
         with torch.no_grad():
             for x in pic_gen():
