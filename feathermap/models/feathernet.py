@@ -7,17 +7,15 @@ from math import ceil, sqrt
 import copy
 from timeit import default_timer as timer
 from feathermap.utils import timed
-from itertools import starmap
 
 
 class LoadLayer:
-    """Forward prehook for inner layers. Load weights and biases from V, calculating on
-    the fly. Must be as fast as possible"""
+    """Forward prehook for inner layers. Load weights and biases from V1 and V2
+    calculating on the fly. Must be as fast as possible"""
 
-    def __init__(self, name, module, V_iter, V1, V2, size_n, offset):
+    def __init__(self, name, module, V1, V2, size_n, offset):
         self.module = module
         self.name = name
-        self.V_iter = V_iter
         self.V1 = V1
         self.V2 = V2
         self.offset = offset
@@ -40,11 +38,7 @@ class LoadLayer:
         return [ops[k] for k in ops]
 
     def mm_map(self, a):
-        return torch.matmul(*a).view(-1, 1)
-
-    def get_weights(self):
-        # Initialize
-        w = torch.empty(self.w_num)
+        return self.w_p * torch.matmul(*a).view(-1, 1)
 
     def get_idx_splits(self):
         """Obeys index slicing"""
@@ -115,7 +109,7 @@ class LoadLayer:
         return (row_start, col_start, row_end, col_end)
 
     def __call__(self, module, inputs):
-        #print("prehook activated: {} {}".format(self.name, self.module))
+        # print("prehook activated: {} {}".format(self.name, self.module))
         if len(self.ops) == 1:
             module.weight = self.mm_map(*self.ops).reshape(self.w_size)
         else:
@@ -126,15 +120,12 @@ class LoadLayer:
             b = torch.rand(self.b_num)
             module.bias = b.reshape(self.b_size)
 
+
 def unload_layer(module, inputs, outputs):
     """Forward hook for inner layers. Unloads weights and biases for given layer"""
+    # print("posthook activated: {}".format(module))
     module.weight = None
     module.bias = None
-
-
-def reset_V_generator(module, inputs):
-    """Forward prehook for outermost FeatherNet layer"""
-    module.V_iter[0] = module.V_generator()
 
 
 class FeatherNet(nn.Module):
@@ -181,9 +172,6 @@ class FeatherNet(nn.Module):
 
         # Normalize V1 and V2
         self.norm_V()
-
-        # Use list as pointer
-        self.V_iter = [self.V_generator()]
 
     def norm_V(self):
         """Currently implemented only for uniform intializations"""
@@ -265,19 +253,12 @@ class FeatherNet(nn.Module):
             except nn.modules.module.ModuleAttributeError:
                 pass
 
-    def V_generator(self):
-        for i in range(self.size_n):
-            for j in range(self.size_n):
-                yield torch.dot(self.V1[i, :], self.V2[:, j])
-
     def register_inter_hooks(self):
         prehooks, posthooks, prehook_callables = [], [], []
         offset = -1
         for name, module in self.get_WorB_modules():
             # Create callable prehook object; see LoadLayer; update running V.view(-1, 1) index
-            prehook_callable = LoadLayer(
-                name, module, self.V_iter, self.V1, self.V2, self.size_n, offset
-            )
+            prehook_callable = LoadLayer(name, module, self.V1, self.V2, self.size_n, offset)
             offset += prehook_callable.w_num
 
             # Register hooks
@@ -292,10 +273,6 @@ class FeatherNet(nn.Module):
         self.prehooks = prehooks
         self.posthooks = posthooks
         self.prehook_callables = prehook_callables
-
-    def register_outer_hooks(self):
-        prehook_handle = self.register_forward_pre_hook(reset_V_generator)
-        self.prehook_outer = [prehook_handle]
 
     def unregister_hooks(self, hooks):
         # Remove hooks
@@ -370,7 +347,6 @@ class FeatherNet(nn.Module):
             self.V = None
             # Add forward hooks
             self.register_inter_hooks()
-            self.register_outer_hooks()
         return nn.Module.train(self, mode)
 
     def forward(self, *args, **kwargs):
@@ -405,15 +381,15 @@ def main():
         frmodel = FeatherNet(rmodel, exclude=(nn.BatchNorm2d), compress=1.0).to(device)
         for name, module, kind in frmodel.get_WandB_modules():
             p = getattr(module, kind)
-            #print(name, kind, p.size())
-        #print("-" * 20)
-        #print("n = {}".format(frmodel.size_n))
+            # print(name, kind, p.size())
+        # print("-" * 20)
+        # print("n = {}".format(frmodel.size_n))
         frmodel.eval()
         frmodel(torch.rand(1, 3, 32, 32))
         start = timer()
         with torch.no_grad():
             for x in pic_gen():
-                rmodel(x)
+                frmodel(x)
         end = timer()
         print(100 / (end - start))
 
