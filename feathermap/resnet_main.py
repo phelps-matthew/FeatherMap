@@ -17,6 +17,7 @@ import logging
 import argparse
 from feathermap.data_loader import get_train_valid_loader, get_test_loader
 import numpy as np
+import os
 
 
 @timed
@@ -94,6 +95,8 @@ def evaluate(model, test_loader, device):
 @timed
 def main(args):
     # Initialize logger
+    if not os.path.exists(args.log_dir):
+        os.makedirs(args.log_dir)
     set_logger(args.log_dir + "resnet_main_compress_" + str(args.compress) + ".log")
 
     # Enable GPU support
@@ -131,9 +134,9 @@ def main(args):
 
     # Train, evaluate
     steps, losses, accuracies = train(model, train_loader, valid_loader, args.epochs, args.lr, DEV)
-    np.savetxt(("./logs/resnet_steps_compress_" + str(args.compress) + ".csv"), steps)
-    np.savetxt(("./logs/resnet_losses_compress_" + str(args.compress) + ".csv"), losses)
-    np.savetxt(("./logs/resnet_accuracies_compress_" + str(args.compress) + ".csv"), accuracies)
+    np.savetxt((args.log_dir + "resnet_steps_compress_" + str(args.compress) + ".csv"), steps)
+    np.savetxt((args.log_dir + "resnet_losses_compress_" + str(args.compress) + ".csv"), losses)
+    np.savetxt((args.log_dir + "resnet_accuracies_compress_" + str(args.compress) + ".csv"), accuracies)
     #evaluate(model, test_loader, DEV)
 
     # Save the model checkpoint
