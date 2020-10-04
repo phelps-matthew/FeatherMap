@@ -16,10 +16,11 @@ from feathermap.utils import timed, print_gpu_status, set_logger
 import logging
 import argparse
 from feathermap.data_loader import get_train_valid_loader, get_test_loader
+import numpy as np
 
 
 @timed
-def train(model, train_loader, epochs, lr, device):
+def train(model, train_loader, valid_loader, epochs, lr, device):
     model.train()
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
@@ -33,6 +34,9 @@ def train(model, train_loader, epochs, lr, device):
     # Train the model
     total_step = len(train_loader)
     curr_lr = lr
+    losses = []
+    steps = []
+    accuracies = []
     for epoch in range(epochs):
         for i, (images, labels) in enumerate(train_loader):
             images = images.to(device)
@@ -48,14 +52,22 @@ def train(model, train_loader, epochs, lr, device):
             optimizer.step()
 
             if (i + 1) % 100 == 0:
-                logging.info("Epoch [{}/{}], Step [{}/{}] Loss: {:.4f}".format(
-                        epoch + 1, epochs, i + 1, total_step, loss.item())
+                logging.info( "Epoch [{}/{}], Step [{}/{}] Loss: {:.4f}".format(
+                        epoch + 1, epochs, i + 1, total_step, loss.item()
+                    )
                 )
+                losses.append(loss.item())
+                steps.append(i + 1 + total_step * epoch)
 
         # Decay learning rate
         if (epoch + 1) % 20 == 0:
             curr_lr /= 3
             update_lr(optimizer, curr_lr)
+
+        # Run validation
+        acc = evaluate(model, valid_loader, device)
+        accuracies.append(acc)
+    return steps, losses, accuracies
 
 
 @timed
@@ -75,7 +87,7 @@ def evaluate(model, test_loader, device):
 
         accuracy = 100 * correct / total
 
-        logging.info("Accuracy of the model on the test images: {} %".format(accuracy))
+        logging.info("Accuracy of the model on the {} test images: {} %".format(total, accuracy))
         return accuracy
 
 
@@ -97,7 +109,9 @@ def main(args):
     # Select model
     base_model = ResNet(ResidualBlock, [2, 2, 2])
     if args.compress:
-        model = FeatherNet(base_model, exclude=(nn.BatchNorm2d), compress=args.compress).to(DEV)
+        model = FeatherNet(
+            base_model, exclude=(nn.BatchNorm2d), compress=args.compress
+        ).to(DEV)
     else:
         model = base_model.to(DEV)
 
@@ -116,8 +130,11 @@ def main(args):
     )
 
     # Train, evaluate
-    train(model, train_loader, args.epochs, args.lr, DEV)
-    evaluate(model, test_loader, DEV)
+    steps, losses, accuracies = train(model, train_loader, valid_loader, args.epochs, args.lr, DEV)
+    np.savetxt(("./logs/resnet_steps_compress_" + str(args.compress) + ".csv"), steps)
+    np.savetxt(("./logs/resnet_losses_compress_" + str(args.compress) + ".csv"), losses)
+    np.savetxt(("./logs/resnet_accuracies_compress_" + str(args.compress) + ".csv"), accuracies)
+    #evaluate(model, test_loader, DEV)
 
     # Save the model checkpoint
     if args.save_model:
