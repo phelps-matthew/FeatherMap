@@ -352,10 +352,12 @@ class FeatherNet(nn.Module):
             # Add forward hooks
             self.register_inter_hooks()
 
-    def forward(self, *args, **kwargs):
+    def forward(self, x):
         if self.training:
             self.WandBtoV()
-        return self.module(*args, **kwargs)
+        output = self.module(x)
+        print("\tIn Model: input size", x.size(), "output size", output.size())
+        return output
 
 
 def main():
