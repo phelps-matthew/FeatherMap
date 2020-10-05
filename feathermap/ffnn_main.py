@@ -89,7 +89,7 @@ def main(args):
     # Initialize logger
     if not os.path.exists(args.log_dir):
         os.makedirs(args.log_dir)
-    set_logger(args.log_dir + "resnet_main_compress_" + str(args.compress) + ".log")
+    set_logger(args.log_dir + "ffnn_compress_" + str(args.compress) + ".log")
 
     # Enable GPU support
     use_cuda = torch.cuda.is_available()
@@ -108,7 +108,7 @@ def main(args):
     # Select model
     base_model = FFNN(input_size, args.hidden_size, num_classes)
     if args.compress:
-        model = FeatherNet(base_model, compress=args.compress).to(DEV)
+        model = FeatherNet(base_model, compress=args.compress, constrain=args.constrain).to(DEV)
     else:
         model = base_model.to(DEV)
 
@@ -138,6 +138,12 @@ if __name__ == "__main__":
         parser.add_argument( "--save-model", action="store_true", default=False, help="Save model in local directory",)
         parser.add_argument( "--data-dir", type=str, default="./data/", help="Path to store MNIST data",)
         parser.add_argument( "--log-dir", type=str, default="./logs/", help="Path to store training and evaluation logs",)
+        parser.add_argument(
+            "--constrain",
+            action="store_true",
+            default=False,
+            help="Constrain to per layer caching",
+        )
         args = parser.parse_args()
         print(args)
         main(args)

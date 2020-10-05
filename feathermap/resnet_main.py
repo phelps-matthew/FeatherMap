@@ -116,7 +116,7 @@ def main(args):
     base_model = ResNet(ResidualBlock, [2, 2, 2])
     if args.compress:
         model = FeatherNet(
-            base_model, exclude=(nn.BatchNorm2d), compress=args.compress
+            base_model, exclude=(nn.BatchNorm2d), compress=args.compress, constrain=args.constrain
         ).to(DEV)
     else:
         model = base_model.to(DEV)
@@ -205,6 +205,12 @@ if __name__ == "__main__":
             action="store_true",
             default=False,
             help="Plot 9x9 sample grid of dataset",
+        )
+        parser.add_argument(
+            "--constrain",
+            action="store_true",
+            default=False,
+            help="Constrain to per layer caching",
         )
         args = parser.parse_args()
         print(args)
