@@ -14,4 +14,5 @@ git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
 tmux source ~/.tmux.conf
 
 # start a new window
-tmux new-session -t aws-tmx
+hname=`hostname`
+tmux new-session -t aws-$hname
