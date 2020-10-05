@@ -18,12 +18,15 @@
 	- [X] global method
 	- [ ] create train/eval switch, possibly serialized flag
 	- [X] obtain minimum allowable compression
+- [ ] REST or GraphQL API (or microservice)
 - [ ] GPU EC2 P3 check
 - [ ] Fine-tuning based on param size
 	- [ ] Validation Set
 	- [ ] Early stopping w/ checkpoints
 	- [ ] Learning rate scheduler?
 	- [ ] MLFlow
+- [ ] Toggle logging and printing or allow both
+	- [ ] Verbose mode
 - [ ] Docker on EC2 (no GPU)
 - [ ] Docker on EC2 (GPU)
 - [ ] Find best `num_workers`
@@ -32,7 +35,6 @@
 - [ ] Setup Travis CI
 - [X] Rename papers in ./references
 - [ ] Analyze residual blocks
-- [ ] REST or GraphQL API (or microservice)
 - [ ] Clean up all code, reorganize structure
 - [ ] Create Readme
 - [ ] Sphinx documentation
