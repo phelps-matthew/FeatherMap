@@ -19,6 +19,8 @@
 	- [ ] create train/eval switch, possibly serialized flag
 	- [X] obtain minimum allowable compression
 - [ ] REST or GraphQL API (or microservice)
+- [X] GPU EC2 P2 check
+- [X] Find best `num_workers`; `num_workers=1` suggested
 - [ ] GPU EC2 P3 check
 - [ ] Fine-tuning based on param size
 	- [ ] Validation Set
@@ -29,7 +31,6 @@
 	- [ ] Verbose mode
 - [ ] Docker on EC2 (no GPU)
 - [ ] Docker on EC2 (GPU)
-- [ ] Find best `num_workers`
 - [ ] Compare timings of training and evaluation vs compression
 - [ ] S3 ?
 - [ ] Setup Travis CI
