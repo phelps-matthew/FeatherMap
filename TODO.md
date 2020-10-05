@@ -8,14 +8,25 @@
 - [X] Recheck initialization method
 - [X] Handle BatchNorm2d `fan_in`
 - [X] Handle train() and eval() appropriately
-- [X] argprase for jobs?
+- [X] argparse for jobs
 - [X] Test ResNet
 - [X] Docker containerization locally
 - [X] Add logging for training times and accuracy
+- [X] Add validation dataloader
+- [ ] Compute weights 'on the fly' from variable pool
+	- [X] forward() prehook and posthook
+	- [X] global method
+	- [ ] create train/eval switch, possibly serialized flag
+	- [X] obtain minimum allowable compression
+- [ ] REST or GraphQL API (or microservice)
+- [ ] GPU EC2 P3 check
 - [ ] Fine-tuning based on param size
 	- [ ] Validation Set
 	- [ ] Early stopping w/ checkpoints
 	- [ ] Learning rate scheduler?
+	- [ ] MLFlow
+- [ ] Toggle logging and printing or allow both
+	- [ ] Verbose mode
 - [ ] Docker on EC2 (no GPU)
 - [ ] Docker on EC2 (GPU)
 - [ ] Find best `num_workers`
@@ -24,3 +35,6 @@
 - [ ] Setup Travis CI
 - [X] Rename papers in ./references
 - [ ] Analyze residual blocks
+- [ ] Clean up all code, reorganize structure
+- [ ] Create Readme
+- [ ] Sphinx documentation

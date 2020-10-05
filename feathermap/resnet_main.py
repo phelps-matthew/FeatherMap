@@ -12,14 +12,18 @@ import torchvision
 import torchvision.transforms as transforms
 from feathermap.models.resnet import ResidualBlock, ResNet
 from feathermap.models.feathernet import FeatherNet
-from feathermap.utils import timed, print_gpu_status, set_logger
+from feathermap.utils import timed, print_gpu_status, set_logger, plot_metrics
 import logging
 import argparse
 from feathermap.data_loader import get_train_valid_loader, get_test_loader
+import numpy as np
+import os
+import pandas as pd
+import matplotlib.pylab as plt
 
 
 @timed
-def train(model, train_loader, epochs, lr, device):
+def train(model, train_loader, valid_loader, epochs, lr, device):
     model.train()
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
@@ -33,7 +37,9 @@ def train(model, train_loader, epochs, lr, device):
     # Train the model
     total_step = len(train_loader)
     curr_lr = lr
+    metrics = {"epoch": [], "loss": [], "accuracy": []}
     for epoch in range(epochs):
+        model.train()
         for i, (images, labels) in enumerate(train_loader):
             images = images.to(device)
             labels = labels.to(device)
@@ -47,15 +53,23 @@ def train(model, train_loader, epochs, lr, device):
             loss.backward()
             optimizer.step()
 
-            if (i + 1) % 100 == 0:
-                logging.info("Epoch [{}/{}], Step [{}/{}] Loss: {:.4f}".format(
-                        epoch + 1, epochs, i + 1, total_step, loss.item())
+            if (i + 1) % 50 == 0:
+                logging.info(
+                    "Epoch [{}/{}], Step [{}/{}] Loss: {:.4f}".format(
+                        epoch + 1, epochs, i + 1, total_step, loss.item()
+                    )
                 )
-
+        metrics["loss"].append(loss.item())
+        metrics["epoch"].append(i + 1 + total_step * epoch)
         # Decay learning rate
         if (epoch + 1) % 20 == 0:
             curr_lr /= 3
             update_lr(optimizer, curr_lr)
+
+        # Run validation
+        acc = evaluate(model, valid_loader, device)
+        metrics["accuracy"].append(acc)
+    return metrics
 
 
 @timed
@@ -75,13 +89,17 @@ def evaluate(model, test_loader, device):
 
         accuracy = 100 * correct / total
 
-        logging.info("Accuracy of the model on the test images: {} %".format(accuracy))
+        logging.info(
+            "Accuracy of the model on the {} test images: {} %".format(total, accuracy)
+        )
         return accuracy
 
 
 @timed
 def main(args):
     # Initialize logger
+    if not os.path.exists(args.log_dir):
+        os.makedirs(args.log_dir)
     set_logger(args.log_dir + "resnet_main_compress_" + str(args.compress) + ".log")
 
     # Enable GPU support
@@ -97,7 +115,9 @@ def main(args):
     # Select model
     base_model = ResNet(ResidualBlock, [2, 2, 2])
     if args.compress:
-        model = FeatherNet(base_model, exclude=(nn.BatchNorm2d), compress=args.compress).to(DEV)
+        model = FeatherNet(
+            base_model, exclude=(nn.BatchNorm2d), compress=args.compress
+        ).to(DEV)
     else:
         model = base_model.to(DEV)
 
@@ -116,7 +136,11 @@ def main(args):
     )
 
     # Train, evaluate
-    train(model, train_loader, args.epochs, args.lr, DEV)
+    metrics = train(model, train_loader, valid_loader, args.epochs, args.lr, DEV)
+    csv_dir = args.log_dir + "resnet_train_compress" + str(args.compress) + ".csv"
+    df = pd.DataFrame(data=metrics)
+    df.to_csv(csv_dir, index=False)
+    plot_metrics(df, args.log_dir + "resnet_metrics_compress_" + str(args.compress).replace('.','_'))
     evaluate(model, test_loader, DEV)
 
     # Save the model checkpoint
