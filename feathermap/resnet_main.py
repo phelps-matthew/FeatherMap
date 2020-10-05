@@ -12,13 +12,14 @@ import torchvision
 import torchvision.transforms as transforms
 from feathermap.models.resnet import ResidualBlock, ResNet
 from feathermap.models.feathernet import FeatherNet
-from feathermap.utils import timed, print_gpu_status, set_logger
+from feathermap.utils import timed, print_gpu_status, set_logger, plot_metrics
 import logging
 import argparse
 from feathermap.data_loader import get_train_valid_loader, get_test_loader
 import numpy as np
 import os
 import pandas as pd
+import matplotlib.pylab as plt
 
 
 @timed
@@ -36,10 +37,9 @@ def train(model, train_loader, valid_loader, epochs, lr, device):
     # Train the model
     total_step = len(train_loader)
     curr_lr = lr
-    losses = []
-    steps = []
-    accuracies = []
+    metrics = {"epoch": [], "loss": [], "accuracy": []}
     for epoch in range(epochs):
+        model.train()
         for i, (images, labels) in enumerate(train_loader):
             images = images.to(device)
             labels = labels.to(device)
@@ -53,13 +53,14 @@ def train(model, train_loader, valid_loader, epochs, lr, device):
             loss.backward()
             optimizer.step()
 
-            if (i + 1) % 100 == 0:
-                logging.info( "Epoch [{}/{}], Step [{}/{}] Loss: {:.4f}".format(
+            if (i + 1) % 50 == 0:
+                logging.info(
+                    "Epoch [{}/{}], Step [{}/{}] Loss: {:.4f}".format(
                         epoch + 1, epochs, i + 1, total_step, loss.item()
                     )
                 )
-        losses.append(loss.item())
-        steps.append(i + 1 + total_step * epoch)
+        metrics["loss"].append(loss.item())
+        metrics["epoch"].append(i + 1 + total_step * epoch)
         # Decay learning rate
         if (epoch + 1) % 20 == 0:
             curr_lr /= 3
@@ -67,8 +68,8 @@ def train(model, train_loader, valid_loader, epochs, lr, device):
 
         # Run validation
         acc = evaluate(model, valid_loader, device)
-        accuracies.append(acc)
-    return steps, losses, accuracies
+        metrics["accuracy"].append(acc)
+    return metrics
 
 
 @timed
@@ -88,7 +89,9 @@ def evaluate(model, test_loader, device):
 
         accuracy = 100 * correct / total
 
-        logging.info("Accuracy of the model on the {} test images: {} %".format(total, accuracy))
+        logging.info(
+            "Accuracy of the model on the {} test images: {} %".format(total, accuracy)
+        )
         return accuracy
 
 
@@ -133,16 +136,12 @@ def main(args):
     )
 
     # Train, evaluate
-    #steps, losses, accuracies = train(model, train_loader, valid_loader, args.epochs, args.lr, DEV)
-    steps, losses, accuracies = np.random.rand(10), np.random.rand(10), np.random.rand(10)
-    loss_dir = args.log_dir + "resnet_train_compress" + str(args.compress) + ".csv"
-    np.savetxt(loss_dir, (steps, losses, accuracies))
-    #evaluate(model, test_loader, DEV)
-    df = pd.read_csv(loss_dir, delimiter=' ')
-    # fmt: off
-    import ipdb; ipdb.set_trace(context=30)  # noqa
-    # fmt: on
-
+    metrics = train(model, train_loader, valid_loader, args.epochs, args.lr, DEV)
+    csv_dir = args.log_dir + "resnet_train_compress" + str(args.compress) + ".csv"
+    df = pd.DataFrame(data=metrics)
+    df.to_csv(csv_dir, index=False)
+    plot_metrics(df, args.log_dir + "resnet_metrics_compress_" + str(args.compress).replace('.','_'))
+    evaluate(model, test_loader, DEV)
 
     # Save the model checkpoint
     if args.save_model:
