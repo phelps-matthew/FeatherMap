@@ -7,16 +7,17 @@ from feathermap.models.ffnn import FFNN
 from feathermap.utils import timed, print_gpu_status, set_logger
 import logging
 import argparse
+import os
 
 
 def load_data(batch_size, **kwargs):
     # MNIST dataset
     train_dataset = torchvision.datasets.MNIST(
-        root="./data", train=True, transform=transforms.ToTensor(), download=True
+        root=args.data_dir, train=True, transform=transforms.ToTensor(), download=True
     )
 
     test_dataset = torchvision.datasets.MNIST(
-        root="./data", train=False, transform=transforms.ToTensor()
+        root=args.data_dir, train=False, transform=transforms.ToTensor()
     )
 
     # Data loader
@@ -62,6 +63,7 @@ def train(model, train_loader, epochs, lr, device):
                 )
 
 
+@timed
 def evaluate(model, test_loader, device):
     model.eval()
     with torch.no_grad():
@@ -85,17 +87,19 @@ def evaluate(model, test_loader, device):
 @timed
 def main(args):
     # Initialize logger
-    set_logger("logs/ffnn_main_compress_" + str(args.compress) + ".log")
+    if not os.path.exists(args.log_dir):
+        os.makedirs(args.log_dir)
+    set_logger(args.log_dir + "resnet_main_compress_" + str(args.compress) + ".log")
 
     # Enable GPU support
-    DEV = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    use_cuda = torch.cuda.is_available()
     print_gpu_status()
-    # Device configuration
-    kwargs = (
-        {"num_workers": args.num_workers, "pin_memory": True}
-        if torch.cuda.is_available()
-        else {}
-    )
+    if use_cuda:
+        DEV = torch.device("cuda:0")
+        cuda_kwargs = {"num_workers": args.num_workers, "pin_memory": True}
+    else:
+        DEV = torch.device("cpu")
+        cuda_kwargs = {}
 
     # MNIST-parameters
     input_size = 784
@@ -109,21 +113,17 @@ def main(args):
         model = base_model.to(DEV)
 
     # Load data
-    train_loader, test_loader = load_data(args.batch_size, **kwargs)
+    train_loader, test_loader = load_data(args.batch_size, **cuda_kwargs)
 
     # Train, evaluate
-    # train(model, train_loader, args.epochs, args.lr, DEV)
-
-    @timed
-    def long_eval(num, model, test_loader, DEV):
-        for i in range(num):
-            evaluate(model, test_loader, DEV)
-
-    long_eval(100, model, test_loader, DEV)
+    train(model, train_loader, args.epochs, args.lr, DEV)
+    evaluate(model, test_loader, DEV)
 
     # Save the model checkpoint
     if args.save_model:
-        torch.save(model.state_dict(), "logs/ffnn_compress_" + str(args.compress) + ".ckpt")
+        torch.save(
+            model.state_dict(),
+            args.log_dir + "ffnn_compress_" + str(args.compress) + ".ckpt",)
 
 
 if __name__ == "__main__":
@@ -134,10 +134,10 @@ if __name__ == "__main__":
         parser.add_argument( "--batch-size", type=int, default=100, help="Mini-batch size")
         parser.add_argument( "--lr", type=float, default=0.001, help="Learning rate at t=0")
         parser.add_argument( "--num-workers", type=int, default=1, help="Number of dataloader processing threads. Try adjusting for faster training",)
-        parser.add_argument( "--compress", type=float, default=0.5, help="Compression rate. Set to zero for base model",
-        )
-        parser.add_argument( "--save-model", action="store_true", default=False, help="Save model in local directory",
-        )
+        parser.add_argument( "--compress", type=float, default=0.5, help="Compression rate. Set to zero for base model",)
+        parser.add_argument( "--save-model", action="store_true", default=False, help="Save model in local directory",)
+        parser.add_argument( "--data-dir", type=str, default="./data/", help="Path to store MNIST data",)
+        parser.add_argument( "--log-dir", type=str, default="./logs/", help="Path to store training and evaluation logs",)
         args = parser.parse_args()
         print(args)
         main(args)
