@@ -3,7 +3,7 @@ from feathermap.utils import timed
 from math import sqrt
 
 
-dim_in = 2 ** 12
+dim_in = 2 ** 14
 dim_out = 2 ** 4
 A = torch.randn(dim_in, dim_out)
 B = torch.randn(dim_out, dim_in)
@@ -17,7 +17,7 @@ H = torch.rand(int(sqrt(dim_in)), int(sqrt(dim_in)))
 
 @timed
 def mam(a, b):
-    for _ in range(1000000):
+    for _ in range(10000):
         out = torch.mm(a, b)
     return out
 
