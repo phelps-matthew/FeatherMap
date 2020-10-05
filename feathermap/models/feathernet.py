@@ -356,7 +356,8 @@ class FeatherNet(nn.Module):
         if self.training:
             self.WandBtoV()
         output = self.module(x)
-        print("\tIn Model: input size", x.size(), "output size", output.size())
+        if self.verbose:
+            print("\tIn Model: input size", x.size(), "output size", output.size())
         return output
 
 
