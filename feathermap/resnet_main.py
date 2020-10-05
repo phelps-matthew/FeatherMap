@@ -19,7 +19,7 @@ import pandas as pd
 
 
 @timed
-def train(model, train_loader, valid_loader, epochs, lr, device):
+def train(model, train_loader, valid_loader, epochs, lr, device, verbose):
     model.train()
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
@@ -45,7 +45,10 @@ def train(model, train_loader, valid_loader, epochs, lr, device):
             loss = criterion(outputs, labels)
 
             # Monitor for GPU
-            print("Outside: input size", images.size(), "output_size", outputs.size())
+            if verbose:
+                print(
+                    "Outside: input size", images.size(), "output_size", outputs.size()
+                )
 
             # Backward and optimize
             optimizer.zero_grad()
@@ -105,7 +108,11 @@ def main(args):
     base_model = ResNet(ResidualBlock, [2, 2, 2])
     if args.compress:
         model = FeatherNet(
-            base_model, exclude=(nn.BatchNorm2d), compress=args.compress, constrain=args.constrain
+            base_model,
+            exclude=(nn.BatchNorm2d),
+            compress=args.compress,
+            constrain=args.constrain,
+            verbose=args.verbose,
         )
     else:
         model = base_model
@@ -138,11 +145,24 @@ def main(args):
     )
 
     # Train, evaluate
-    metrics = train(model, train_loader, valid_loader, args.epochs, args.lr, DEV)
+    metrics = train(
+        model,
+        train_loader,
+        valid_loader,
+        args.epochs,
+        args.lr,
+        DEV,
+        verbose=args.verbose,
+    )
     csv_dir = args.log_dir + "resnet_train_compress" + str(args.compress) + ".csv"
     df = pd.DataFrame(data=metrics)
     df.to_csv(csv_dir, index=False)
-    plot_metrics(df, args.log_dir + "resnet_metrics_compress_" + str(args.compress).replace('.','_'))
+    plot_metrics(
+        df,
+        args.log_dir
+        + "resnet_metrics_compress_"
+        + str(args.compress).replace(".", "_"),
+    )
     evaluate(model, test_loader, DEV)
 
     # Save the model checkpoint
@@ -213,6 +233,12 @@ if __name__ == "__main__":
             action="store_true",
             default=False,
             help="Constrain to per layer caching",
+        )
+        parser.add_argument(
+            "--verbose",
+            action="store_true",
+            default=False,
+            help="Verbose messages.",
         )
         args = parser.parse_args()
         print(args)
