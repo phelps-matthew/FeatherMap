@@ -32,7 +32,7 @@ def load_data(batch_size, **kwargs):
 
 
 @timed
-def train(model, train_loader, epochs, lr, device):
+def train(model, train_loader, epochs, lr, device, verbose=False):
     model.train()
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
@@ -50,7 +50,8 @@ def train(model, train_loader, epochs, lr, device):
             loss = criterion(outputs, labels)
 
             # Monitor for GPU
-            print("Outside: input size", images.size(), "output_size", outputs.size())
+            if verbose:
+                print("Outside: input size", images.size(), "output_size", outputs.size())
 
             # Backward and optimize
             optimizer.zero_grad()
@@ -100,7 +101,7 @@ def main(args):
     # Select model
     base_model = FFNN(input_size, args.hidden_size, num_classes)
     if args.compress:
-        model = FeatherNet(base_model, compress=args.compress, constrain=args.constrain)
+        model = FeatherNet(base_model, compress=args.compress, constrain=args.constrain, verbose=args.verbose)
     else:
         model = base_model
 
@@ -121,7 +122,7 @@ def main(args):
     train_loader, test_loader = load_data(args.batch_size, **cuda_kwargs)
 
     # Train, evaluate
-    train(model, train_loader, args.epochs, args.lr, DEV)
+    train(model, train_loader, args.epochs, args.lr, DEV, verbose=args.verbose)
     evaluate(model, test_loader, DEV)
 
     # Save the model checkpoint
@@ -143,12 +144,8 @@ if __name__ == "__main__":
         parser.add_argument( "--save-model", action="store_true", default=False, help="Save model in local directory",)
         parser.add_argument( "--data-dir", type=str, default="./data/", help="Path to store MNIST data",)
         parser.add_argument( "--log-dir", type=str, default="./logs/", help="Path to store training and evaluation logs",)
-        parser.add_argument(
-            "--constrain",
-            action="store_true",
-            default=False,
-            help="Constrain to per layer caching",
-        )
+        parser.add_argument( "--constrain", action="store_true", default=False, help="Constrain to per layer caching",)
+        parser.add_argument( "--verbose", action="store_true", default=False, help="Verbose messages.",)
         args = parser.parse_args()
         print(args)
         main(args)
