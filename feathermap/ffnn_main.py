@@ -112,6 +112,7 @@ def main(args):
         DEV = torch.device("cuda:0")
         cuda_kwargs = {"num_workers": args.num_workers, "pin_memory": True}
     else:
+        print("Utilizing CPU!")
         DEV = torch.device("cpu")
         cuda_kwargs = {}
     model.to(DEV)
