@@ -8,18 +8,14 @@
 
 import torch
 import torch.nn as nn
-import torchvision
-import torchvision.transforms as transforms
 from feathermap.models.resnet import ResidualBlock, ResNet
 from feathermap.models.feathernet import FeatherNet
-from feathermap.utils import timed, print_gpu_status, set_logger, plot_metrics
+from feathermap.utils import timed, set_logger, plot_metrics
 import logging
 import argparse
 from feathermap.data_loader import get_train_valid_loader, get_test_loader
-import numpy as np
 import os
 import pandas as pd
-import matplotlib.pylab as plt
 
 
 @timed
@@ -47,6 +43,9 @@ def train(model, train_loader, valid_loader, epochs, lr, device):
             # Forward pass
             outputs = model(images)
             loss = criterion(outputs, labels)
+
+            # Monitor for GPU
+            print("Outside: input size", images.size(), "output_size", outputs.size())
 
             # Backward and optimize
             optimizer.zero_grad()
@@ -102,24 +101,27 @@ def main(args):
         os.makedirs(args.log_dir)
     set_logger(args.log_dir + "resnet_main_compress_" + str(args.compress) + ".log")
 
-    # Enable GPU support
-    use_cuda = torch.cuda.is_available()
-    print_gpu_status()
-    if use_cuda:
-        DEV = torch.device("cuda:0")
-        cuda_kwargs = {"num_workers": args.num_workers, "pin_memory": True}
-    else:
-        DEV = torch.device("cpu")
-        cuda_kwargs = {}
-
     # Select model
     base_model = ResNet(ResidualBlock, [2, 2, 2])
     if args.compress:
         model = FeatherNet(
             base_model, exclude=(nn.BatchNorm2d), compress=args.compress, constrain=args.constrain
-        ).to(DEV)
+        )
     else:
-        model = base_model.to(DEV)
+        model = base_model
+
+    # Enable GPU support
+    if torch.cuda.is_available():
+        print("Utilizing", torch.cuda.device_count(), "GPU(s)!")
+        if torch.cuda.device_count() > 1:
+            model = nn.DataParallel(model)
+        DEV = torch.device("cuda:0")
+        cuda_kwargs = {"num_workers": args.num_workers, "pin_memory": True}
+    else:
+        print("Utilizing CPU!")
+        DEV = torch.device("cpu")
+        cuda_kwargs = {}
+    model.to(DEV)
 
     # Create dataloaders
     train_loader, valid_loader = get_train_valid_loader(
