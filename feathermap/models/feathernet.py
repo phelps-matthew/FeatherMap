@@ -138,10 +138,12 @@ class FeatherNet(nn.Module):
         exclude: tuple = (),
         clone: bool = True,
         verbose: bool = False,
+        constrain: bool = False,
     ) -> None:
         super().__init__()
         self.module = copy.deepcopy(module) if clone else module
         self.verbose = verbose
+        self.constrain = constrain
         self.exclude = exclude
         self.prehooks = None
         self.posthooks = None
@@ -149,13 +151,9 @@ class FeatherNet(nn.Module):
 
         # Check compression range
         self.max_compress = self.get_max_compression()
-        if compress < self.max_compress:
-            print(
-                (
-                    "Due to streaming layer weight allocation, cannot compress beyond {:.4f}."
-                    + "Setting compression to {:.4f}"
-                ).format(self.max_compress, self.max_compress)
-            )
+        if compress < self.max_compress and self.constrain:
+            print( ( "Due to streaming layer weight allocation, cannot compress beyond {:.4f}."
+                    + "Setting compression to {:.4f}").format(self.max_compress, self.max_compress))
             self.compress = self.max_compress
         else:
             self.compress = compress
