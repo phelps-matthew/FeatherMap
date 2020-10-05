@@ -1,0 +1,8 @@
+[2020-10-04 19:04:35,358] INFO - Some torch.cuda functionality unavailable
+[2020-10-04 19:04:36,546] INFO - Epoch [1/1], Step [100/600], Loss: 0.4405
+[2020-10-04 19:04:37,688] INFO - Epoch [1/1], Step [200/600], Loss: 0.3099
+[2020-10-04 19:04:38,838] INFO - Epoch [1/1], Step [300/600], Loss: 0.1949
+[2020-10-04 19:04:39,988] INFO - Epoch [1/1], Step [400/600], Loss: 0.3237
+[2020-10-04 19:04:41,130] INFO - Epoch [1/1], Step [500/600], Loss: 0.1223
+[2020-10-04 19:04:42,294] INFO - Epoch [1/1], Step [600/600], Loss: 0.1450
+[2020-10-04 19:04:42,872] INFO - Accuracy of the network on the 10000 test images: 95.58 %
