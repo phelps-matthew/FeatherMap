@@ -3,6 +3,7 @@ import torch
 import logging
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 # Disable font warnings from matplotlib
 logging.getLogger("matplotlib.font_manager").disabled = True
@@ -13,7 +14,7 @@ def timed(method):
         start = timer()
         result = method(*args, **kw)
         end = timer()
-        logging.info(
+        print(
             "{!r} duration (secs):  {:.4f}".format(method.__name__, end - start)
         )
         return result
@@ -82,3 +83,14 @@ def plot_images(images, cls_true, cls_pred=None):
         ax.set_yticks([])
 
     plt.show()
+
+def plot_metrics(metrics_df, img_dir=None):
+    """Args: metrics : dataframe"""
+    fig, ax = plt.subplots()
+    metrics_df.plot(x="epoch", y="loss", ax=ax)
+    metrics_df['accuracy'].plot(x='epoch', ax=ax,secondary_y=True)
+    plt.legend(["accuracy"])
+    if img_dir is not None:
+        fig.savefig(str(img_dir), transparent=False, dpi=300, bbox_inches="tight")
+    else:
+        plt.show()

@@ -7,9 +7,9 @@ setup(
     install_requires=[
         "torch",
         "torchvision",
-        #"numpy",
-        #"pandas",
-        #"matplotlib",
+        "numpy",
+        "pandas",
+        "matplotlib",
         #"streamlit"
         # "pathlib",
         # "sklearn",
