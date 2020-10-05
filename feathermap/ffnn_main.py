@@ -114,6 +114,7 @@ def main(args):
     else:
         DEV = torch.device("cpu")
         cuda_kwargs = {}
+    model.to(DEV)
 
     # Load data
     train_loader, test_loader = load_data(args.batch_size, **cuda_kwargs)
