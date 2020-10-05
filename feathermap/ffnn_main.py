@@ -45,10 +45,12 @@ def train(model, train_loader, epochs, lr, device):
             # Move tensors to the configured device
             images = images.reshape(-1, 28 * 28).to(device)
             labels = labels.to(device)
-
             # Forward pass
             outputs = model(images)
             loss = criterion(outputs, labels)
+
+            # Monitor for GPU
+            print("Outside: input size", images.size(), "output_size", outputs.size())
 
             # Backward and optimize
             optimizer.zero_grad()
@@ -91,16 +93,6 @@ def main(args):
         os.makedirs(args.log_dir)
     set_logger(args.log_dir + "ffnn_compress_" + str(args.compress) + ".log")
 
-    # Enable GPU support
-    use_cuda = torch.cuda.is_available()
-    print_gpu_status()
-    if use_cuda:
-        DEV = torch.device("cuda:0")
-        cuda_kwargs = {"num_workers": args.num_workers, "pin_memory": True}
-    else:
-        DEV = torch.device("cpu")
-        cuda_kwargs = {}
-
     # MNIST-parameters
     input_size = 784
     num_classes = 10
@@ -108,9 +100,20 @@ def main(args):
     # Select model
     base_model = FFNN(input_size, args.hidden_size, num_classes)
     if args.compress:
-        model = FeatherNet(base_model, compress=args.compress, constrain=args.constrain).to(DEV)
+        model = FeatherNet(base_model, compress=args.compress, constrain=args.constrain)
     else:
-        model = base_model.to(DEV)
+        model = base_model
+
+    # Enable GPU support
+    if torch.cuda.is_available():
+        print("Utilizing", torch.cuda.device_count(), "GPU(s)!")
+        if torch.cuda.device_count() > 1:
+            model = nn.DataParallel(model)
+        DEV = torch.device("cuda:0")
+        cuda_kwargs = {"num_workers": args.num_workers, "pin_memory": True}
+    else:
+        DEV = torch.device("cpu")
+        cuda_kwargs = {}
 
     # Load data
     train_loader, test_loader = load_data(args.batch_size, **cuda_kwargs)
