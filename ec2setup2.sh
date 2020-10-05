@@ -9,4 +9,4 @@ cd ./FeatherMap/
 pip install -e .
 cd feathermap
 # test to ensure proper operation
-python ffnn_main.py --epochs 1
+python ffnn_main.py --epochs 1 --log-dir ./logs/foo/
