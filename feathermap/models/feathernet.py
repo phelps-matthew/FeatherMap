@@ -160,7 +160,8 @@ class FeatherNet(nn.Module):
         else:
             self.compress = compress
 
-        # Unregister module Parameters, create scaler attributes
+        # Unregister module Parameters, create scaler attributes, set weights
+        # as tensors of prior data
         self.unregister_params()
 
         self.size_n = ceil(sqrt(self.get_num_WandB()))
@@ -334,12 +335,7 @@ class FeatherNet(nn.Module):
     def train(self, mode: bool = True):
         """Remove forward hooks, load weights and biases.
         `self.eval()` calls self.train(False)"""
-        # Remove forward hooks
-        if mode:
-            self.WandBtoV()
-        else:
-            self.WandBtoV()
-
+        self.WandBtoV()
         return nn.Module.train(self, mode)
 
     def train_stream(self, mode: bool = True):
