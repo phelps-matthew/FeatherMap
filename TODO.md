@@ -17,6 +17,7 @@
 	- [X] forward() prehook and posthook
 	- [X] global method
 	- [ ] create train/eval switch, possibly serialized flag
+	- [ ] test on the fly calcs, ensuring same accuracy results
 	- [X] obtain minimum allowable compression
 - [ ] REST or GraphQL API (or microservice)
 - [X] GPU EC2 P2 check
