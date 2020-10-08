@@ -58,7 +58,7 @@ classes = ('plane', 'car', 'bird', 'cat', 'deer',
 # Model
 print('==> Building model..')
 # net = VGG('VGG19')
-net = ResNet34()
+model = ResNet34()
 # net = PreActResNet18()
 # net = GoogLeNet()
 # net = DenseNet121()
@@ -73,9 +73,9 @@ net = ResNet34()
 # net = RegNetX_200MF()
 
 # Select model
-base_net = net
+base_net = model
 if args.compress:
-    model = FeatherNet(
+    net = FeatherNet(
         base_net,
         exclude=(nn.BatchNorm2d),
         compress=args.compress,
@@ -86,6 +86,7 @@ net = net.to(device)
 if device == 'cuda':
     net = torch.nn.DataParallel(net)
     cudnn.benchmark = True
+
 
 if args.resume:
     # Load checkpoint.
