@@ -236,7 +236,7 @@ class FeatherNet(nn.Module):
                     yield name, module, "weight"
                 if getattr(module, "bias") is not None:
                     yield name, module, "bias"
-            except nn.modules.module.ModuleAttributeError:
+            except AttributeError:
                 pass
 
     def get_WorB_modules(self) -> Iterator[Tuple[str, nn.Module]]:
@@ -248,7 +248,7 @@ class FeatherNet(nn.Module):
                     continue
                 if getattr(module, "weight") is not None:
                     yield name, module
-            except nn.modules.module.ModuleAttributeError:
+            except AttributeError:
                 pass
 
     def register_inter_hooks(self):
