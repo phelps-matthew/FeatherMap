@@ -3,7 +3,6 @@ env/
 data/
 FeathetMap/feathermap/data/
 feathermap/data/
-feathermap/
 feathermap/train/data/
 feathermap/train/checkpoint/
 
