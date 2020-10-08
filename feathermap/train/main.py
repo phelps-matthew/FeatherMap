@@ -106,8 +106,7 @@ optimizer = optim.SGD(net.parameters(), lr=args.lr,
 
 # Training
 def train(epoch):
-    print("\nCompression: {:.4f}".format(args.compress))
-    print('\nEpoch: %d' % epoch)
+    print("\nEpoch: {}\t Compression: {:.4f}\t lr: {}".format(epoch, args.compress, args.lr))
     net.train()
     train_loss = 0
     correct = 0
