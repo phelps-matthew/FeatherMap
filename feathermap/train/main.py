@@ -21,6 +21,7 @@ parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
 parser.add_argument('--resume', '-r', action='store_true',
                     help='resume from checkpoint')
 parser.add_argument("--compress", type=float, default=0.5, help="Compression rate. Set to zero for base model")
+parser.add_argument( "--constrain", action="store_true", default=False, help="Constrain to per layer caching",)
 args = parser.parse_args()
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -79,6 +80,7 @@ if args.compress:
         base_net,
         exclude=(nn.BatchNorm2d),
         compress=args.compress,
+        constrain=args.constrain
     )
 else:
     net = base_net
@@ -104,6 +106,7 @@ optimizer = optim.SGD(net.parameters(), lr=args.lr,
 
 # Training
 def train(epoch):
+    print("\nCompression: {:.4f}".format(args.compress))
     print('\nEpoch: %d' % epoch)
     net.train()
     train_loss = 0
