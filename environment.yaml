@@ -1,0 +1,10 @@
+name: /home/mgp/Insight/project/FeatherMap/env
+channels:
+  - defaults
+dependencies:
+  - numpy
+  - pandas
+  - pytorch
+  - torchvision
+  - matplotlib
+prefix: /home/mgp/Insight/project/FeatherMap/env
