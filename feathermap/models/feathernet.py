@@ -351,6 +351,7 @@ class FeatherNet(nn.Module):
             self.V = None
             # Add forward hooks
             self.register_inter_hooks()
+        return nn.Module.train(self, mode)
 
     def forward(self, x):
         if self.training:
