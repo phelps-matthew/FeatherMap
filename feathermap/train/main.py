@@ -27,8 +27,7 @@ args = parser.parse_args()
 
 # Build Model
 print('==> Building model..')
-net = ResNet34()
-base_model = net
+base_model = ResNet34()
 if args.compress:
     model = FeatherNet(
         base_model,
@@ -78,7 +77,7 @@ if args.resume:
     print('==> Resuming from checkpoint..')
     assert os.path.isdir('checkpoint'), 'Error: no checkpoint directory found!'
     checkpoint = torch.load('./checkpoint/' + args.ckpt_name)
-    net.load_state_dict(checkpoint['net'])
+    model.load_state_dict(checkpoint['model'])
     best_acc = checkpoint['acc']
     start_epoch = checkpoint['epoch']
 
@@ -97,7 +96,7 @@ def train(epoch):
     for batch_idx, (inputs, targets) in enumerate(train_loader):
         inputs, targets = inputs.to(DEV), targets.to(DEV)
         optimizer.zero_grad()
-        outputs = net(inputs)
+        outputs = model(inputs)
         loss = criterion(outputs, targets)
         loss.backward()
         optimizer.step()
@@ -120,7 +119,7 @@ def validate(epoch):
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(valid_loader):
             inputs, targets = inputs.to(DEV), targets.to(DEV)
-            outputs = net(inputs)
+            outputs = model(inputs)
             loss = criterion(outputs, targets)
 
             valid_loss += loss.item()
@@ -136,7 +135,7 @@ def validate(epoch):
     if acc > best_acc:
         print('Saving..')
         state = {
-            'net': net.state_dict(),
+            'model': model.state_dict(),
             'acc': acc,
             'epoch': epoch,
         }
@@ -153,7 +152,7 @@ def test(epoch):
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(test_loader):
             inputs, targets = inputs.to(DEV), targets.to(DEV)
-            outputs = net(inputs)
+            outputs = model(inputs)
             loss = criterion(outputs, targets)
 
             test_loss += loss.item()
