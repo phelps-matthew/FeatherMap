@@ -89,7 +89,7 @@ scheduler = MultiStepLR(optimizer, milestones=[100, 200, 300], gamma=0.1)
 
 # Training
 def train(epoch):
-    print("\nEpoch: {}  ||  Compression: {:.2f}  ||  lr: {}".format(epoch, args.compress, scheduler.get_last_lr()[0]))
+    print("\nEpoch: {}  ||  Compression: {:.2f}  ||  lr: {:.5f}".format(epoch, args.compress, scheduler.get_last_lr()[0]))
     model.train()
     train_loss = 0
     correct = 0
