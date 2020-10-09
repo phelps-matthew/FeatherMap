@@ -85,7 +85,7 @@ if args.resume:
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(), lr=args.lr,
                       momentum=0.9, weight_decay=5e-4)
-scheduler = MultiStepLR(optimizer, milestones=[150, 250], gamma=0.1)
+scheduler = MultiStepLR(optimizer, milestones=[100, 200, 300], gamma=0.1)
 
 # Training
 def train(epoch):
@@ -166,7 +166,7 @@ def test(epoch):
                          % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
 
 
-for epoch in range(start_epoch, start_epoch+350):
+for epoch in range(start_epoch, start_epoch + 400):
     train(epoch)
     validate(epoch)
     test(epoch)
