@@ -71,6 +71,7 @@ classes = ('plane', 'car', 'bird', 'cat', 'deer',
 
 best_acc = 0  # best test accuracy
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
+save_display = False
 
 if args.resume:
     # Load checkpoint.
@@ -112,6 +113,7 @@ def train(epoch):
 
 def validate(epoch):
     global best_acc
+    global save_display
     model.eval()
     valid_loss = 0
     correct = 0
@@ -133,7 +135,7 @@ def validate(epoch):
     # Save checkpoint.
     acc = 100.*correct/total
     if acc > best_acc:
-        print('Saving..')
+        save_display = True
         state = {
             'model': model.state_dict(),
             'acc': acc,
@@ -168,4 +170,6 @@ for epoch in range(start_epoch, start_epoch+350):
     train(epoch)
     validate(epoch)
     test(epoch)
+    if save_display:
+        print('Saving..')
     scheduler.step()
