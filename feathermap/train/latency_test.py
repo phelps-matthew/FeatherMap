@@ -68,8 +68,15 @@ else:
     DEV = torch.device("cpu")
     cuda_kwargs = {}
 model.to(DEV)
-model.eval()
+if args.constrain:
+    model.train_stream(False)
+else:
+    model.eval()
 
+
+# fmt: off
+import ipdb,os; ipdb.set_trace(context=30)  # noqa
+# fmt: on
 # Create dataloaders
 print("==> Preparing data..")
 test_loader = get_test_loader(data_dir=args.data_dir, batch_size=100, **cuda_kwargs)
