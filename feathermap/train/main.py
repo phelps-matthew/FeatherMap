@@ -135,7 +135,6 @@ def validate(epoch):
     # Save checkpoint.
     acc = 100.*correct/total
     if acc > best_acc:
-        save_display = True
         state = {
             'model': model.state_dict(),
             'acc': acc,
@@ -145,6 +144,7 @@ def validate(epoch):
             os.mkdir('checkpoint')
         torch.save(state, './checkpoint/' + args.ckpt_name)
         best_acc = acc
+    save_display = acc > best_acc
 
 def test(epoch):
     model.eval()
