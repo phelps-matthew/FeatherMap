@@ -165,7 +165,7 @@ def test(epoch):
 
 
 for epoch in range(start_epoch, start_epoch+350):
-    scheduler.step()
     train(epoch)
     validate(epoch)
     test(epoch)
+    scheduler.step()
