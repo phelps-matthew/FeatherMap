@@ -14,13 +14,13 @@ from torch.utils.data.sampler import SubsetRandomSampler
 
 
 def get_train_valid_loader(data_dir,
-                           batch_size,
-                           augment,
-                           random_seed,
+                           batch_size=128,
+                           augment=True,
+                           random_seed=42,
                            valid_size=0.1,
                            shuffle=True,
                            show_sample=False,
-                           num_workers=4,
+                           num_workers=2,
                            pin_memory=False):
     """
     Utility function for loading and returning train and valid
@@ -49,7 +49,10 @@ def get_train_valid_loader(data_dir,
     error_msg = "[!] valid_size should be in the range [0, 1]."
     assert ((valid_size >= 0) and (valid_size <= 1)), error_msg
 
-    normalize = transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
+    normalize = transforms.Normalize(
+        mean=[0.4914, 0.4822, 0.4465],
+        std=[0.2023, 0.1994, 0.2010],
+    )
 
     # define transforms
     valid_transform = transforms.Compose([
@@ -116,9 +119,9 @@ def get_train_valid_loader(data_dir,
 
 
 def get_test_loader(data_dir,
-                    batch_size,
-                    shuffle=True,
-                    num_workers=4,
+                    batch_size=100,
+                    shuffle=False,
+                    num_workers=2,
                     pin_memory=False):
     """
     Utility function for loading and returning a multi-process
@@ -137,8 +140,8 @@ def get_test_loader(data_dir,
     - data_loader: test set iterator.
     """
     normalize = transforms.Normalize(
-        mean=[0.485, 0.456, 0.406],
-        std=[0.229, 0.224, 0.225],
+        mean=[0.4914, 0.4822, 0.4465],
+        std=[0.2023, 0.1994, 0.2010],
     )
 
     # define transform
