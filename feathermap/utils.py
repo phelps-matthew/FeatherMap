@@ -40,8 +40,8 @@ def progress_bar(current, total, msg=None):
     tot_time = cur_time - begin_time
 
     L = []
-    L.append("  Step: %s" % format_time(step_time))
-    L.append(" | Tot: %s" % format_time(tot_time))
+    L.append("  Step: {:<4}".format(format_time(step_time)))
+    L.append(" | Tot: {:<8}".format(format_time(tot_time)))
     if msg:
         L.append(" | " + msg)
 
