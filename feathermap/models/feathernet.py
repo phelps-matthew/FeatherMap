@@ -13,9 +13,10 @@ class LoadLayer:
     """Forward prehook for inner layers. Load weights and biases from V1 and V2
     calculating on the fly. Must be as fast as possible"""
 
-    def __init__(self, name, module, V1, V2, size_n, offset):
+    def __init__(self, name, module, V1, V2, size_n, offset, verbose=False):
         self.module = module
         self.name = name
+        self.verbose = verbose
         self.V1 = V1
         self.V2 = V2
         self.offset = offset
@@ -109,7 +110,8 @@ class LoadLayer:
         return (row_start, col_start, row_end, col_end)
 
     def __call__(self, module, inputs):
-        # print("prehook activated: {} {}".format(self.name, self.module))
+        if self.verbose:
+            print("prehook activated: {} {}".format(self.name, self.module))
         if len(self.ops) == 1:
             module.weight = self.mm_map(*self.ops).reshape(self.w_size)
         else:
@@ -262,7 +264,7 @@ class FeatherNet(nn.Module):
         offset = -1
         for name, module in self.get_WorB_modules():
             # Create callable prehook object; see LoadLayer; update running V.view(-1, 1) index
-            prehook_callable = LoadLayer(name, module, self.V1, self.V2, self.size_n, offset)
+            prehook_callable = LoadLayer(name, module, self.V1, self.V2, self.size_n, offset, self.verbose)
             offset += prehook_callable.w_num
 
             # Register hooks
@@ -338,7 +340,7 @@ class FeatherNet(nn.Module):
         return nn.Module.train(self.module, mode)
 
     def deploy(self, mode: bool = True):
-        """Remove forward hooks, load weights and biases.
+        """Whether in train or eval mode, activate deploy mode
         `self.eval()` calls self.train(False)"""
         if mode:
             nn.Module.train(self.module, mode=False)
