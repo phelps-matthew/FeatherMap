@@ -1,4 +1,4 @@
-'''Train CIFAR10 with PyTorch.'''
+"""Train CIFAR10 with PyTorch."""
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -10,34 +10,38 @@ from feathermap.utils import progress_bar
 from feathermap.train.models.resnet import ResNet34
 from feathermap.models.feathernet import FeatherNet
 from feathermap.data_loader import get_train_valid_loader, get_test_loader
-parser = argparse.ArgumentParser( description="PyTorch CIFAR10 training with Structured Multi-Hashing compression", formatter_class=argparse.ArgumentDefaultsHelpFormatter,)
-parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
-parser.add_argument("--batch-size", type=int, default=128, help="Mini-batch size")
-parser.add_argument('--resume', '-r', action='store_true', help='Resume from checkpoint')
-parser.add_argument("--compress", type=float, default=0, help="Compression rate. Set to zero for base model")
-parser.add_argument("--constrain", action="store_true", default=False, help="Constrain to per layer caching",)
-parser.add_argument("--num-workers", type=int, default=2, help="Number of dataloader processing threads. Try adjusting for faster training",)
-parser.add_argument("--ckpt-name", type=str, default="ckpt.pth", help="Name of checkpoint")
-parser.add_argument("--data-dir", type=str, default="./data/", help="Path to store CIFAR10 data",)
-parser.add_argument("--valid-size", type=float, default=0.1, help="Validation set size as fraction of train",)
+
+parser = argparse.ArgumentParser( description="PyTorch CIFAR10 training with Structured Multi-Hashing compression",
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter,)
+parser.add_argument("--compress", type=float, default=0, help="Compression rate. Set to zero for base model", metavar='')
+parser.add_argument("--resume", "-r", action="store_true", help="Resume from checkpoint")
+parser.add_argument("--ckpt-name", type=str, default="ckpt.pth", help="Name of checkpoint",metavar='')
+parser.add_argument("--constrain", action="store_true", default=False, help="Constrain to per layer caching")
+parser.add_argument("--lr", default=0.01, type=float, help="Learning rate. Set to 0.1 for base model (uncompressed) training.", metavar='')
+parser.add_argument("--batch-size", type=int, default=128, help="Mini-batch size", metavar='')
+parser.add_argument("--valid-size", type=float, default=0.1, help="Validation set size as fraction of train",metavar='')
+parser.add_argument("--num-workers", type=int, default=2,
+    help="Number of dataloader processing threads. Try adjusting for faster training",metavar='')
+parser.add_argument("--data-dir", type=str, default="./data/", help="Path to store CIFAR10 data",metavar='')
 args = parser.parse_args()
 
 
 # Build Model
-print('==> Building model..')
+print("==> Building model..")
 base_model = ResNet34()
 if args.compress:
     model = FeatherNet(
         base_model,
         exclude=(nn.BatchNorm2d),
         compress=args.compress,
-        constrain=args.constrain
+        constrain=args.constrain,
     )
 else:
+    assert(args.lr == 0.1), "Warning: Suggest setting base-model learning rate to 0.1"
     model = base_model
 
 # Enable GPU support
-print('==> Setting up device..')
+print("==> Setting up device..")
 if torch.cuda.is_available():
     print("Utilizing", torch.cuda.device_count(), "GPU(s)!")
     if torch.cuda.device_count() > 1:
@@ -52,19 +56,27 @@ else:
 model.to(DEV)
 
 # Create dataloaders
-print('==> Preparing data..')
+print("==> Preparing data..")
 train_loader, valid_loader = get_train_valid_loader(
     data_dir=args.data_dir,
     batch_size=args.batch_size,
     valid_size=args.valid_size,
     **cuda_kwargs
 )
-test_loader = get_test_loader(
-    data_dir=args.data_dir, **cuda_kwargs
-)
+test_loader = get_test_loader(data_dir=args.data_dir, **cuda_kwargs)
 
-classes = ('plane', 'car', 'bird', 'cat', 'deer',
-           'dog', 'frog', 'horse', 'ship', 'truck')
+classes = (
+    "plane",
+    "car",
+    "bird",
+    "cat",
+    "deer",
+    "dog",
+    "frog",
+    "horse",
+    "ship",
+    "truck",
+)
 
 best_acc = 0  # best test accuracy
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
@@ -72,21 +84,24 @@ save_display = False
 
 if args.resume:
     # Load checkpoint.
-    print('==> Resuming from checkpoint..')
-    assert os.path.isdir('checkpoint'), 'Error: no checkpoint directory found!'
-    checkpoint = torch.load('./checkpoint/' + args.ckpt_name)
-    model.load_state_dict(checkpoint['model'])
-    best_acc = checkpoint['acc']
-    start_epoch = checkpoint['epoch']
+    print("==> Resuming from checkpoint..")
+    assert os.path.isdir("checkpoint"), "Error: no checkpoint directory found!"
+    checkpoint = torch.load("./checkpoint/" + args.ckpt_name)
+    model.load_state_dict(checkpoint["model"])
+    best_acc = checkpoint["acc"]
+    start_epoch = checkpoint["epoch"]
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(model.parameters(), lr=args.lr,
-                      momentum=0.9, weight_decay=5e-4)
+optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
 scheduler = MultiStepLR(optimizer, milestones=[100, 200], gamma=0.1)
 
 # Training
 def train(epoch):
-    print("\nEpoch: {}  ||  Compression: {:.2f}  ||  lr: {:.5f}".format(epoch, args.compress, scheduler.get_last_lr()[0]))
+    print(
+        "\nEpoch: {}  ||  Compression: {:.2f}  ||  lr: {:.5f}".format(
+            epoch, args.compress, scheduler.get_last_lr()[0]
+        )
+    )
     model.train()
     train_loss = 0
     correct = 0
@@ -104,8 +119,12 @@ def train(epoch):
         total += targets.size(0)
         correct += predicted.eq(targets).sum().item()
 
-        progress_bar(batch_idx, len(train_loader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                     % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
+        progress_bar(
+            batch_idx,
+            len(train_loader),
+            "Loss: %.3f | Acc: %.3f%% (%d/%d)"
+            % (train_loss / (batch_idx + 1), 100.0 * correct / total, correct, total),
+        )
 
 
 # Validation
@@ -127,21 +146,30 @@ def validate(epoch):
             total += targets.size(0)
             correct += predicted.eq(targets).sum().item()
 
-            progress_bar(batch_idx, len(valid_loader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                         % (valid_loss/(batch_idx+1), 100.*correct/total, correct, total))
+            progress_bar(
+                batch_idx,
+                len(valid_loader),
+                "Loss: %.3f | Acc: %.3f%% (%d/%d)"
+                % (
+                    valid_loss / (batch_idx + 1),
+                    100.0 * correct / total,
+                    correct,
+                    total,
+                ),
+            )
 
     # Save checkpoint.
-    acc = 100.*correct/total
+    acc = 100.0 * correct / total
     save_display = acc > best_acc
     if acc > best_acc:
         state = {
-            'model': model.state_dict(),
-            'acc': acc,
-            'epoch': epoch,
+            "model": model.state_dict(),
+            "acc": acc,
+            "epoch": epoch,
         }
-        if not os.path.isdir('checkpoint'):
-            os.mkdir('checkpoint')
-        torch.save(state, './checkpoint/' + args.ckpt_name)
+        if not os.path.isdir("checkpoint"):
+            os.mkdir("checkpoint")
+        torch.save(state, "./checkpoint/" + args.ckpt_name)
         best_acc = acc
 
 
@@ -162,15 +190,24 @@ def test(epoch):
             total += targets.size(0)
             correct += predicted.eq(targets).sum().item()
 
-            progress_bar(batch_idx, len(test_loader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                         % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
+            progress_bar(
+                batch_idx,
+                len(test_loader),
+                "Loss: %.3f | Acc: %.3f%% (%d/%d)"
+                % (
+                    test_loss / (batch_idx + 1),
+                    100.0 * correct / total,
+                    correct,
+                    total,
+                ),
+            )
 
 
-print('==> Initiate Training..')
+print("==> Initiate Training..")
 for epoch in range(start_epoch, 300):
     train(epoch)
     validate(epoch)
     test(epoch)
     if save_display:
-        print('Saving..')
+        print("Saving..")
     scheduler.step()
