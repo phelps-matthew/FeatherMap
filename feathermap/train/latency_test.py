@@ -10,15 +10,23 @@ from feathermap.models.feathernet import FeatherNet
 from feathermap.data_loader import get_test_loader
 from timeit import default_timer as timer
 
-parser = argparse.ArgumentParser(description="PyTorch CIFAR10 Training")
+parser = argparse.ArgumentParser(
+    description="PyTorch CIFAR10 Training",
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+)
 parser.add_argument(
-    "--epochs", type=int, default=1, help="Number of epochs to evaluate over test set"
+    "--epochs",
+    type=int,
+    default=1,
+    help="Number of epochs to evaluate over test set",
+    metavar="",
 )
 parser.add_argument(
     "--compress",
     type=float,
     default=0,
     help="Compression rate. Set to zero for base model",
+    metavar="",
 )
 parser.add_argument(
     "--constrain",
@@ -31,12 +39,14 @@ parser.add_argument(
     type=int,
     default=2,
     help="Number of dataloader processing threads. Try adjusting for faster training",
+    metavar="",
 )
 parser.add_argument(
     "--data-dir",
     type=str,
     default="./data/",
     help="Path to store CIFAR10 data",
+    metavar="",
 )
 args = parser.parse_args()
 
