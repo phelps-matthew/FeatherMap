@@ -6,9 +6,9 @@ import seaborn as sns
 sns.set_theme(style="darkgrid")
 
 
-compressions = np.array([0.01, 0.1, 0.15, 0.3])
+compressions = np.array([0.01, 0.05, 0.1, 0.15, 0.2, 0.3])
 # accuracies = np.array([71.99, 78.28, 80.99, 84.24, 85.07, 85.76])
-accuracies = np.array([88.63, 91.8, 92.11, 92.89])
+accuracies = np.array([88.63, 91.63, 91.8, 92.11, 92.28, 92.89])
 base_accuracy = 95.43
 
 comp_fps = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
@@ -27,7 +27,7 @@ def accuracy_graph():
     ax.set_title("ResNet-34 on CIFAR10")
     ax.text(0, base_accuracy + 1, s="Base ResNet-34", ha="left")
     plt.xticks(np.arange(0, 0.35, 0.05))
-    plt.yticks(np.arange(70, 105, 5))
+    plt.yticks(np.arange(80, 105, 5))
     plt.show()
 
 
