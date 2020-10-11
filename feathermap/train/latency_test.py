@@ -48,6 +48,26 @@ parser.add_argument(
     help="Path to store CIFAR10 data",
     metavar="",
 )
+parser.add_argument(
+    "--pin-memory",
+    type=bool,
+    default=False,
+    help="Pin GPU memory",
+    metavar="",
+)
+parser.add_argument(
+    "--cudabench",
+    type=bool,
+    default=False,
+    help="Set cudann.benchmark to true for static model and input",
+    metavar="",
+)
+parser.add_argument(
+    "--cpu",
+    action="store_true",
+    default=False,
+    help="Use CPU",
+)
 args = parser.parse_args()
 
 
@@ -66,13 +86,13 @@ else:
 
 # Enable GPU support
 print("==> Preparing device..")
-if torch.cuda.is_available():
+if torch.cuda.is_available() and not args.cpu:
     print("Utilizing", torch.cuda.device_count(), "GPU(s)!")
     if torch.cuda.device_count() > 1:
         model = nn.DataParallel(model)
     DEV = torch.device("cuda:0")
-    cuda_kwargs = {"num_workers": args.num_workers, "pin_memory": True}
-    cudnn.benchmark = True
+    cuda_kwargs = {"num_workers": args.num_workers, "pin_memory": args.pin_memory}
+    cudnn.benchmark = args.cudabench
 else:
     print("Utilizing CPU!")
     DEV = torch.device("cpu")
