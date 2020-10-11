@@ -2,10 +2,8 @@
 import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
-import os
 import argparse
 from feathermap.train.models.resnet import ResNet34
-from feathermap.train.mutils import progress_bar
 from feathermap.models.feathernet import FeatherNet
 from feathermap.data_loader import get_test_loader
 from timeit import default_timer as timer
@@ -68,6 +66,18 @@ parser.add_argument(
     default=False,
     help="Use CPU",
 )
+parser.add_argument(
+    "--deploy",
+    action="store_true",
+    default=False,
+    help="Calculate weights on the fly in eval mode",
+)
+parser.add_argument(
+    "--v",
+    action="store_true",
+    default=False,
+    help="Verbose",
+)
 args = parser.parse_args()
 
 
@@ -80,6 +90,7 @@ if args.compress:
         exclude=(nn.BatchNorm2d),
         compress=args.compress,
         constrain=args.constrain,
+        verbose=args.v
     )
 else:
     model = base_model
@@ -98,17 +109,14 @@ else:
     DEV = torch.device("cpu")
     cuda_kwargs = {}
 model.to(DEV)
-if args.constrain:
-    model.train_stream(False)
+if args.deploy:
+    model.deploy()
 else:
     model.eval()
 
 # Create dataloaders
 print("==> Preparing data..")
 test_loader = get_test_loader(data_dir=args.data_dir, batch_size=100, **cuda_kwargs)
-
-best_acc = 0  # best test accuracy
-start_epoch = 0  # start from epoch 0 or last checkpoint epoch
 
 # Benchmark latency
 print("==> Evaluating test set..")
@@ -118,6 +126,8 @@ def test(epoch):
     start = timer()
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(test_loader):
+            if batch_idx == 3:
+                break
             inputs, targets = inputs.to(DEV), targets.to(DEV)
             outputs = model(inputs)
     end = timer()
@@ -125,7 +135,7 @@ def test(epoch):
 
 
 dt = []
-for epoch in range(start_epoch, start_epoch + args.epochs):
+for epoch in range(0, args.epochs):
     dt.append(test(epoch))
 
 # 10k images in test set; result is fps
