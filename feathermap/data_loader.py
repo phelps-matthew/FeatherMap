@@ -7,7 +7,6 @@ Easily extended to MNIST, CIFAR-100 and Imagenet.
 import torch
 import numpy as np
 
-from feathermap.utils import plot_images
 from torchvision import datasets
 from torchvision import transforms
 from torch.utils.data.sampler import SubsetRandomSampler
