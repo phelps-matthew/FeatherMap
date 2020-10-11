@@ -98,7 +98,7 @@ scheduler = MultiStepLR(optimizer, milestones=[100, 200], gamma=0.1)
 # Training
 def train(epoch):
     print(
-        "\nEpoch: {}  ||  Compression: {:.2f}  ||  lr: {:.5f}".format(
+        "\nEpoch: {}  ||  Compression: {:.2f}  ||  lr: {:.4f}".format(
             epoch, args.compress, scheduler.get_last_lr()[0]
         )
     )
