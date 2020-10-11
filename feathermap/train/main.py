@@ -157,7 +157,7 @@ def train(epoch):
         progress_bar(
             batch_idx,
             len(train_loader),
-            "Loss: {:.3f} | Acc: {.3f} ({}/{})".format(
+            "Loss: {:.3f} | Acc: {:.3f} ({}/{})".format(
                 train_loss / (batch_idx + 1), 100.0 * correct / total, correct, total
             ),
         )
@@ -185,7 +185,7 @@ def validate(epoch):
             progress_bar(
                 batch_idx,
                 len(valid_loader),
-                "Loss: {:.3f} | Acc: {.3f} ({}/{})".format(
+                "Loss: {:.3f} | Acc: {:.3f} ({}/{})".format(
                     valid_loss / (batch_idx + 1),
                     100.0 * correct / total,
                     correct,
@@ -228,7 +228,7 @@ def test(epoch):
             progress_bar(
                 batch_idx,
                 len(test_loader),
-                "Loss: {:.3f} | Acc: {.3f} ({}/{})".format(
+                "Loss: {:.3f} | Acc: {:.3f} ({}/{})".format(
                     test_loss / (batch_idx + 1), 100.0 * correct / total, correct, total
                 ),
             )
