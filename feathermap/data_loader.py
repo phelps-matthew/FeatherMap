@@ -1,25 +1,25 @@
 """
 Create train, valid, test iterators for CIFAR-10 [1].
-Easily extended to MNIST, CIFAR-100 and Imagenet.
-[1]: https://discuss.pytorch.org/t/feedback-on-pytorch-for-kaggle-competitions/2252/4
+[1]: https://gist.github.com/kevinzakka/d33bf8d6c7f06a9d8c76d97a7879f5cb
 """
 
 import torch
 import numpy as np
-
 from torchvision import datasets
 from torchvision import transforms
 from torch.utils.data.sampler import SubsetRandomSampler
 
 
-def get_train_valid_loader(data_dir,
-                           batch_size=128,
-                           augment=True,
-                           random_seed=42,
-                           valid_size=0.1,
-                           shuffle=True,
-                           num_workers=2,
-                           pin_memory=False):
+def get_train_valid_loader(
+    data_dir,
+    batch_size=128,
+    augment=True,
+    random_seed=42,
+    valid_size=0.1,
+    shuffle=True,
+    num_workers=2,
+    pin_memory=False,
+):
     """
     Utility function for loading and returning train and valid
     multi-process iterators over the CIFAR-10 dataset. A sample
@@ -44,7 +44,7 @@ def get_train_valid_loader(data_dir,
     - valid_loader: validation set iterator.
     """
     error_msg = "[!] valid_size should be in the range [0, 1]."
-    assert ((valid_size >= 0) and (valid_size <= 1)), error_msg
+    assert (valid_size >= 0) and (valid_size <= 1), error_msg
 
     normalize = transforms.Normalize(
         mean=[0.4914, 0.4822, 0.4465],
@@ -52,32 +52,42 @@ def get_train_valid_loader(data_dir,
     )
 
     # define transforms
-    valid_transform = transforms.Compose([
+    valid_transform = transforms.Compose(
+        [
             transforms.ToTensor(),
             normalize,
-    ])
+        ]
+    )
     if augment:
-        train_transform = transforms.Compose([
-            transforms.RandomCrop(32, padding=4),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            normalize,
-        ])
+        train_transform = transforms.Compose(
+            [
+                transforms.RandomCrop(32, padding=4),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                normalize,
+            ]
+        )
     else:
-        train_transform = transforms.Compose([
-            transforms.ToTensor(),
-            normalize,
-        ])
+        train_transform = transforms.Compose(
+            [
+                transforms.ToTensor(),
+                normalize,
+            ]
+        )
 
     # load the dataset
     train_dataset = datasets.CIFAR10(
-        root=data_dir, train=True,
-        download=True, transform=train_transform,
+        root=data_dir,
+        train=True,
+        download=True,
+        transform=train_transform,
     )
 
     valid_dataset = datasets.CIFAR10(
-        root=data_dir, train=True,
-        download=True, transform=valid_transform,
+        root=data_dir,
+        train=True,
+        download=True,
+        transform=valid_transform,
     )
 
     num_train = len(train_dataset)
@@ -93,22 +103,26 @@ def get_train_valid_loader(data_dir,
     valid_sampler = SubsetRandomSampler(valid_idx)
 
     train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=batch_size, sampler=train_sampler,
-        num_workers=num_workers, pin_memory=pin_memory,
+        train_dataset,
+        batch_size=batch_size,
+        sampler=train_sampler,
+        num_workers=num_workers,
+        pin_memory=pin_memory,
     )
     valid_loader = torch.utils.data.DataLoader(
-        valid_dataset, batch_size=batch_size, sampler=valid_sampler,
-        num_workers=num_workers, pin_memory=pin_memory,
+        valid_dataset,
+        batch_size=batch_size,
+        sampler=valid_sampler,
+        num_workers=num_workers,
+        pin_memory=pin_memory,
     )
 
     return (train_loader, valid_loader)
 
 
-def get_test_loader(data_dir,
-                    batch_size=100,
-                    shuffle=False,
-                    num_workers=2,
-                    pin_memory=False):
+def get_test_loader(
+    data_dir, batch_size=100, shuffle=False, num_workers=2, pin_memory=False
+):
     """
     Utility function for loading and returning a multi-process
     test iterator over the CIFAR-10 dataset.
@@ -131,19 +145,41 @@ def get_test_loader(data_dir,
     )
 
     # define transform
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        normalize,
-    ])
+    transform = transforms.Compose(
+        [
+            transforms.ToTensor(),
+            normalize,
+        ]
+    )
 
     dataset = datasets.CIFAR10(
-        root=data_dir, train=False,
-        download=True, transform=transform,
+        root=data_dir,
+        train=False,
+        download=True,
+        transform=transform,
     )
 
     data_loader = torch.utils.data.DataLoader(
-        dataset, batch_size=batch_size, shuffle=shuffle,
-        num_workers=num_workers, pin_memory=pin_memory,
+        dataset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        num_workers=num_workers,
+        pin_memory=pin_memory,
     )
 
     return data_loader
+
+
+# For reference
+label_names = [
+    "airplane",
+    "automobile",
+    "bird",
+    "cat",
+    "deer",
+    "dog",
+    "frog",
+    "horse",
+    "ship",
+    "truck",
+]

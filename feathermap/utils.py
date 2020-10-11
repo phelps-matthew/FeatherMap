@@ -6,16 +6,18 @@ from timeit import default_timer as timer
 import os
 import sys
 import time
+from math import ceil
 
 
 _, term_width = os.popen("stty size", "r").read().split()
 term_width = int(term_width)
 
-TOTAL_BAR_LENGTH = 65.0
+TOTAL_BAR_LENGTH = 40.0
 last_time = time.time()
 begin_time = last_time
 
 
+# current = batch idx, total = len(dataloader)
 def progress_bar(current, total, msg=None):
     global last_time, begin_time
     if current == 0:
@@ -51,7 +53,7 @@ def progress_bar(current, total, msg=None):
     # Go back to the center of the bar.
     for i in range(term_width - int(TOTAL_BAR_LENGTH / 2) + 2):
         sys.stdout.write("\b")
-    sys.stdout.write(" %d/%d " % (current + 1, total))
+    sys.stdout.write(" {:>3}/{:<3} ".format(current + 1, total))
 
     if current < total - 1:
         sys.stdout.write("\r")
