@@ -19,7 +19,6 @@ def get_train_valid_loader(data_dir,
                            random_seed=42,
                            valid_size=0.1,
                            shuffle=True,
-                           show_sample=False,
                            num_workers=2,
                            pin_memory=False):
     """
@@ -37,7 +36,6 @@ def get_train_valid_loader(data_dir,
     - valid_size: percentage split of the training set used for
       the validation set. Should be a float in the range [0, 1].
     - shuffle: whether to shuffle the train/validation indices.
-    - show_sample: plot 9x9 sample grid of the dataset.
     - num_workers: number of subprocesses to use when loading the dataset.
     - pin_memory: whether to copy tensors into CUDA pinned memory. Set it to
       True if using GPU.
@@ -103,17 +101,6 @@ def get_train_valid_loader(data_dir,
         valid_dataset, batch_size=batch_size, sampler=valid_sampler,
         num_workers=num_workers, pin_memory=pin_memory,
     )
-
-    # visualize some images
-    if show_sample:
-        sample_loader = torch.utils.data.DataLoader(
-            train_dataset, batch_size=9, shuffle=shuffle,
-            num_workers=num_workers, pin_memory=pin_memory,
-        )
-        data_iter = iter(sample_loader)
-        images, labels = data_iter.next()
-        X = images.numpy().transpose([0, 2, 3, 1])
-        plot_images(X, labels)
 
     return (train_loader, valid_loader)
 
