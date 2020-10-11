@@ -221,6 +221,12 @@ class FeatherNet(nn.Module):
         """Return total number of weights and biases"""
         return sum(v.numel() for name, v in self.get_WandB())
 
+    def clear_WandB(self):
+        """Set weights and biases as empty tensors"""
+        for name, module, kind in self.get_WandB_modules():
+            tensor_size = getattr(module, kind).size()
+            setattr(module, kind, torch.empty(tensor_size))
+
     def get_WandB(self) -> Iterator[Tuple[str, Tensor]]:
         for name, module, kind in self.get_WandB_modules():
             yield name + "." + kind, getattr(module, kind)
@@ -251,7 +257,7 @@ class FeatherNet(nn.Module):
             except AttributeError:
                 pass
 
-    def register_inter_hooks(self):
+    def register_hooks(self):
         prehooks, posthooks, prehook_callables = [], [], []
         offset = -1
         for name, module in self.get_WorB_modules():
@@ -267,6 +273,7 @@ class FeatherNet(nn.Module):
             prehooks.append(prehook_handle)
             posthooks.append(posthook_handle)
             prehook_callables.append(prehook_callable)
+
         # Pass handles into attributes
         self.prehooks = prehooks
         self.posthooks = posthooks
@@ -277,12 +284,6 @@ class FeatherNet(nn.Module):
         if hooks is not None:
             for hook in hooks:
                 hook.remove()
-            # Set weights and biases to empty (non None) tensors; necessary for training mode
-            if hooks is self.prehooks:
-                for layer_obj in self.prehook_callables:
-                    layer_obj.module.weight = torch.empty(layer_obj.w_size)
-                    if layer_obj.bias:
-                        layer_obj.module.bias = torch.empty(layer_obj.b_size)
 
     def unregister_params(self) -> None:
         """Delete params, set attributes as Tensors of prior data,
@@ -334,24 +335,26 @@ class FeatherNet(nn.Module):
         """Remove forward hooks, load weights and biases.
         `self.eval()` calls self.train(False)"""
         self.WandBtoV()
-        return nn.Module.train(self, mode)
+        return nn.Module.train(self.module, mode)
 
-    def train_stream(self, mode: bool = True):
+    def deploy(self, mode: bool = True):
         """Remove forward hooks, load weights and biases.
         `self.eval()` calls self.train(False)"""
-        # Remove forward hooks
         if mode:
+            nn.Module.train(self.module, mode=False)
+            # Clear V weight matrix
+            self.V = None
+            # Add forward hooks
+            self.register_hooks()
+            # Clear weights and biases
+            self.clear_WandB()
+
+        # Remove forward hooks
+        else:
             self.unregister_hooks(self.prehooks)
             self.unregister_hooks(self.posthooks)
             self.unregister_hooks(self.prehook_outer)
             self.WandBtoV()
-        # eval mode
-        else:
-            # Clear V weight matrix
-            self.V = None
-            # Add forward hooks
-            self.register_inter_hooks()
-        return nn.Module.train(self, mode)
 
     def forward(self, x):
         if self.training:
