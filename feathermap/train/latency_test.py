@@ -115,6 +115,7 @@ else:
     model.eval()
 
 print(cuda_kwargs)
+print("cudabench: {}".format(cudnn.benchmark))
 # Create dataloaders
 print("==> Preparing data..")
 test_loader = get_test_loader(data_dir=args.data_dir, batch_size=100, **cuda_kwargs)
