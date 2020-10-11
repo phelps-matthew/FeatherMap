@@ -14,18 +14,60 @@ from feathermap.train.models.resnet import ResNet34
 from feathermap.models.feathernet import FeatherNet
 from feathermap.data_loader import get_train_valid_loader, get_test_loader
 
-parser = argparse.ArgumentParser( description="PyTorch CIFAR10 training with Structured Multi-Hashing compression",
-    formatter_class=argparse.ArgumentDefaultsHelpFormatter,)
-parser.add_argument("--compress", type=float, default=0, help="Compression rate. Set to zero for base model", metavar='')
-parser.add_argument("--resume", "-r", action="store_true", help="Resume from checkpoint")
-parser.add_argument("--ckpt-name", type=str, default="ckpt.pth", help="Name of checkpoint",metavar='')
-parser.add_argument("--constrain", action="store_true", default=False, help="Constrain to per layer caching")
-parser.add_argument("--lr", default=0.01, type=float, help="Learning rate. Set to 0.1 for base model (uncompressed) training.", metavar='')
-parser.add_argument("--batch-size", type=int, default=128, help="Mini-batch size", metavar='')
-parser.add_argument("--valid-size", type=float, default=0.1, help="Validation set size as fraction of train",metavar='')
-parser.add_argument("--num-workers", type=int, default=2,
-    help="Number of dataloader processing threads. Try adjusting for faster training",metavar='')
-parser.add_argument("--data-dir", type=str, default="./data/", help="Path to store CIFAR10 data",metavar='')
+parser = argparse.ArgumentParser(
+    description="PyTorch CIFAR10 training with Structured Multi-Hashing compression",
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+)
+parser.add_argument(
+    "--compress",
+    type=float,
+    default=0,
+    help="Compression rate. Set to zero for base model",
+    metavar="",
+)
+parser.add_argument(
+    "--resume", "-r", action="store_true", help="Resume from checkpoint"
+)
+parser.add_argument(
+    "--ckpt-name", type=str, default="ckpt.pth", help="Name of checkpoint", metavar=""
+)
+parser.add_argument(
+    "--constrain",
+    action="store_true",
+    default=False,
+    help="Constrain to per layer caching",
+)
+parser.add_argument(
+    "--lr",
+    default=0.01,
+    type=float,
+    help="Learning rate. Set to 0.1 for base model (uncompressed) training.",
+    metavar="",
+)
+parser.add_argument(
+    "--batch-size", type=int, default=128, help="Mini-batch size", metavar=""
+)
+parser.add_argument(
+    "--valid-size",
+    type=float,
+    default=0.1,
+    help="Validation set size as fraction of train",
+    metavar="",
+)
+parser.add_argument(
+    "--num-workers",
+    type=int,
+    default=2,
+    help="Number of dataloader processing threads. Try adjusting for faster training",
+    metavar="",
+)
+parser.add_argument(
+    "--data-dir",
+    type=str,
+    default="./data/",
+    help="Path to store CIFAR10 data",
+    metavar="",
+)
 args = parser.parse_args()
 
 
@@ -91,7 +133,7 @@ scheduler = MultiStepLR(optimizer, milestones=[100, 200], gamma=0.1)
 # Training
 def train(epoch):
     print(
-        "\nEpoch: {}  ||  Compression: {:.2f}  ||  lr: {:.4f}".format(
+        "\nEpoch: {}  ||  Compression: {:.2f}  ||  lr: {:<5}".format(
             epoch, args.compress, scheduler.get_last_lr()[0]
         )
     )
@@ -115,8 +157,9 @@ def train(epoch):
         progress_bar(
             batch_idx,
             len(train_loader),
-            "Loss: %.3f | Acc: %.3f%% (%d/%d)"
-            % (train_loss / (batch_idx + 1), 100.0 * correct / total, correct, total),
+            "Loss: {:.3f} | Acc: {.3f} ({}/{})".format(
+                train_loss / (batch_idx + 1), 100.0 * correct / total, correct, total
+            ),
         )
 
 
@@ -142,8 +185,7 @@ def validate(epoch):
             progress_bar(
                 batch_idx,
                 len(valid_loader),
-                "Loss: %.3f | Acc: %.3f%% (%d/%d)"
-                % (
+                "Loss: {:.3f} | Acc: {.3f} ({}/{})".format(
                     valid_loss / (batch_idx + 1),
                     100.0 * correct / total,
                     correct,
@@ -186,12 +228,8 @@ def test(epoch):
             progress_bar(
                 batch_idx,
                 len(test_loader),
-                "Loss: %.3f | Acc: %.3f%% (%d/%d)"
-                % (
-                    test_loss / (batch_idx + 1),
-                    100.0 * correct / total,
-                    correct,
-                    total,
+                "Loss: {:.3f} | Acc: {.3f} ({}/{})".format(
+                    test_loss / (batch_idx + 1), 100.0 * correct / total, correct, total
                 ),
             )
 
