@@ -87,6 +87,7 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
 scheduler = MultiStepLR(optimizer, milestones=[100, 200], gamma=0.1)
 
+
 # Training
 def train(epoch):
     print(
@@ -197,7 +198,7 @@ def test(epoch):
 
 print("==> Initiate Training..")
 for epoch in range(start_epoch, 300):
-    #train(epoch)
+    train(epoch)
     validate(epoch)
     test(epoch)
     if save_display:
