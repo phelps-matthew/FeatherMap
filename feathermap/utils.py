@@ -1,12 +1,96 @@
+"""Some helper functions for PyTorch, including:
+    - progress_bar: mimics xlua.progress.
+    - timed: decorator for timing functions
+"""
 from timeit import default_timer as timer
-import torch
-import logging
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
+import os
+import sys
+import time
 
-# Disable font warnings from matplotlib
-logging.getLogger("matplotlib.font_manager").disabled = True
+
+_, term_width = os.popen("stty size", "r").read().split()
+term_width = int(term_width)
+
+TOTAL_BAR_LENGTH = 65.0
+last_time = time.time()
+begin_time = last_time
+
+
+def progress_bar(current, total, msg=None):
+    global last_time, begin_time
+    if current == 0:
+        begin_time = time.time()  # Reset for new bar.
+
+    cur_len = int(TOTAL_BAR_LENGTH * current / total)
+    rest_len = int(TOTAL_BAR_LENGTH - cur_len) - 1
+
+    sys.stdout.write(" [")
+    for i in range(cur_len):
+        sys.stdout.write("=")
+    sys.stdout.write(">")
+    for i in range(rest_len):
+        sys.stdout.write(".")
+    sys.stdout.write("]")
+
+    cur_time = time.time()
+    step_time = cur_time - last_time
+    last_time = cur_time
+    tot_time = cur_time - begin_time
+
+    L = []
+    L.append("  Step: %s" % format_time(step_time))
+    L.append(" | Tot: %s" % format_time(tot_time))
+    if msg:
+        L.append(" | " + msg)
+
+    msg = "".join(L)
+    sys.stdout.write(msg)
+    for i in range(term_width - int(TOTAL_BAR_LENGTH) - len(msg) - 3):
+        sys.stdout.write(" ")
+
+    # Go back to the center of the bar.
+    for i in range(term_width - int(TOTAL_BAR_LENGTH / 2) + 2):
+        sys.stdout.write("\b")
+    sys.stdout.write(" %d/%d " % (current + 1, total))
+
+    if current < total - 1:
+        sys.stdout.write("\r")
+    else:
+        sys.stdout.write("\n")
+    sys.stdout.flush()
+
+
+def format_time(seconds):
+    days = int(seconds / 3600 / 24)
+    seconds = seconds - days * 3600 * 24
+    hours = int(seconds / 3600)
+    seconds = seconds - hours * 3600
+    minutes = int(seconds / 60)
+    seconds = seconds - minutes * 60
+    secondsf = int(seconds)
+    seconds = seconds - secondsf
+    millis = int(seconds * 1000)
+
+    f = ""
+    i = 1
+    if days > 0:
+        f += str(days) + "D"
+        i += 1
+    if hours > 0 and i <= 2:
+        f += str(hours) + "h"
+        i += 1
+    if minutes > 0 and i <= 2:
+        f += str(minutes) + "m"
+        i += 1
+    if secondsf > 0 and i <= 2:
+        f += str(secondsf) + "s"
+        i += 1
+    if millis > 0 and i <= 2:
+        f += str(millis) + "ms"
+        i += 1
+    if f == "":
+        f = "0ms"
+    return f
 
 
 def timed(method):
@@ -14,83 +98,7 @@ def timed(method):
         start = timer()
         result = method(*args, **kw)
         end = timer()
-        print(
-            "{!r} duration (secs):  {:.4f}".format(method.__name__, end - start)
-        )
+        print("{!r} duration (secs):  {:.4f}".format(method.__name__, end - start))
         return result
 
     return time_me
-
-
-def print_gpu_status():
-    """Print GPU torch cuda status"""
-    try:
-        cuda_status = [
-            "torch.cuda.device(0): {}".format(torch.cuda.device(0)),
-            "torch.cuda.device_count(): {}".format(torch.cuda.device_count()),
-            "torch.cuda.get_device_name(0): {}".format(torch.cuda.get_device_name(0)),
-            "torch.cuda_is_available: {}".format(torch.cuda.is_available()),
-            "torch.cuda.current_device: {}".format(torch.cuda.current_device()),
-        ]
-        logging.info(*cuda_status, sep="\n")
-    except:
-        logging.info("Some torch.cuda functionality unavailable")
-
-
-def set_logger(filepath):
-    logging.basicConfig(
-        filename=str(filepath),
-        filemode="w",  # will rewrite on each run
-        level=logging.DEBUG,
-        format="[%(asctime)s] %(levelname)s - %(message)s",
-    )
-
-
-label_names = [
-    "airplane",
-    "automobile",
-    "bird",
-    "cat",
-    "deer",
-    "dog",
-    "frog",
-    "horse",
-    "ship",
-    "truck",
-]
-
-
-def plot_images(images, cls_true, cls_pred=None):
-    """
-    Adapted from https://github.com/Hvass-Labs/TensorFlow-Tutorials/
-    """
-    fig, axes = plt.subplots(3, 3)
-
-    for i, ax in enumerate(axes.flat):
-        # convert [-1,1] to [0, 255]; imshow expects np.unint8 as dtype
-        imgs = np.round((images[i, :, :, :] + 1) * 255 / 2).astype(np.uint8)
-        ax.imshow(imgs, interpolation="spline16")
-
-        # show true & predicted classes
-        cls_true_name = label_names[cls_true[i]]
-        if cls_pred is None:
-            xlabel = "{0} ({1})".format(cls_true_name, cls_true[i])
-        else:
-            cls_pred_name = label_names[cls_pred[i]]
-            xlabel = "True: {0}\nPred: {1}".format(cls_true_name, cls_pred_name)
-        ax.set_xlabel(xlabel)
-        ax.set_xticks([])
-        ax.set_yticks([])
-
-    plt.show()
-
-def plot_metrics(metrics_df, img_dir=None):
-    """Args: metrics : dataframe"""
-    fig, ax = plt.subplots()
-    metrics_df.plot(x="epoch", y="loss", ax=ax)
-    metrics_df['accuracy'].plot(x='epoch', ax=ax,secondary_y=True)
-    plt.legend(["accuracy"])
-    if img_dir is not None:
-        fig.savefig(str(img_dir), transparent=False, dpi=300, bbox_inches="tight")
-    else:
-        plt.show()

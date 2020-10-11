@@ -3,24 +3,23 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.backends.cudnn as cudnn
+from torch.optim.lr_scheduler import MultiStepLR
 import os
 import argparse
+from feathermap.utils import progress_bar
 from feathermap.train.models.resnet import ResNet34
-from feathermap.train.mutils import progress_bar
 from feathermap.models.feathernet import FeatherNet
 from feathermap.data_loader import get_train_valid_loader, get_test_loader
-from torch.optim.lr_scheduler import MultiStepLR
-
-parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
+parser = argparse.ArgumentParser( description="PyTorch CIFAR10 training with Structured Multi-Hashing compression", formatter_class=argparse.ArgumentDefaultsHelpFormatter,)
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
-parser.add_argument( "--batch-size", type=int, default=128, help="Mini-batch size")
+parser.add_argument("--batch-size", type=int, default=128, help="Mini-batch size")
 parser.add_argument('--resume', '-r', action='store_true', help='Resume from checkpoint')
 parser.add_argument("--compress", type=float, default=0, help="Compression rate. Set to zero for base model")
 parser.add_argument("--constrain", action="store_true", default=False, help="Constrain to per layer caching",)
 parser.add_argument("--num-workers", type=int, default=2, help="Number of dataloader processing threads. Try adjusting for faster training",)
-parser.add_argument( "--ckpt-name", type=str, default="ckpt.pth", help="Name of checkpoint")
+parser.add_argument("--ckpt-name", type=str, default="ckpt.pth", help="Name of checkpoint")
 parser.add_argument("--data-dir", type=str, default="./data/", help="Path to store CIFAR10 data",)
-parser.add_argument( "--valid-size", type=float, default=0.1, help="Validation set size as fraction of train",)
+parser.add_argument("--valid-size", type=float, default=0.1, help="Validation set size as fraction of train",)
 args = parser.parse_args()
 
 
@@ -167,6 +166,7 @@ def test(epoch):
                          % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
 
 
+print('==> Initiate Training..')
 for epoch in range(start_epoch, 400):
     train(epoch)
     validate(epoch)
