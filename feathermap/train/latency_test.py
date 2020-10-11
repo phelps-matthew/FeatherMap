@@ -129,6 +129,7 @@ def test(epoch):
             if batch_idx == 3:
                 break
             inputs, targets = inputs.to(DEV), targets.to(DEV)
+            print("------- Pre-forward ------")
             outputs = model(inputs)
     end = timer()
     return end - start
