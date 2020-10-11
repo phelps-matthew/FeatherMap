@@ -51,6 +51,7 @@ def accuracy_latency_graph():
     ax1.set_ylabel("Accuracy (%)")
     ax1.set_title("ResNet-34")
     ax1.set_yticks(np.linspace(75, 100, 6))
+    #ax1.legend(["Accuracy"], loc=1)
 
     ax2 = ax1.twinx()
     ax2.grid(None)
