@@ -1,4 +1,7 @@
-"""Train CIFAR10 with PyTorch."""
+"""
+Train CIFAR10 with PyTorch [1].
+[1]: https://github.com/kuangliu/pytorch-cifar
+"""
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -37,7 +40,8 @@ if args.compress:
         constrain=args.constrain,
     )
 else:
-    assert(args.lr == 0.1), "Warning: Suggest setting base-model learning rate to 0.1"
+    if args.lr != 0.1:
+        print("Warning: Suggest setting base-model learning rate to 0.1")
     model = base_model
 
 # Enable GPU support
@@ -65,18 +69,6 @@ train_loader, valid_loader = get_train_valid_loader(
 )
 test_loader = get_test_loader(data_dir=args.data_dir, **cuda_kwargs)
 
-classes = (
-    "plane",
-    "car",
-    "bird",
-    "cat",
-    "deer",
-    "dog",
-    "frog",
-    "horse",
-    "ship",
-    "truck",
-)
 
 best_acc = 0  # best test accuracy
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
@@ -205,7 +197,7 @@ def test(epoch):
 
 print("==> Initiate Training..")
 for epoch in range(start_epoch, 300):
-    train(epoch)
+    #train(epoch)
     validate(epoch)
     test(epoch)
     if save_display:
