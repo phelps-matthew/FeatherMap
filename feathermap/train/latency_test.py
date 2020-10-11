@@ -114,6 +114,7 @@ if args.deploy:
 else:
     model.eval()
 
+print(cuda_kwargs)
 # Create dataloaders
 print("==> Preparing data..")
 test_loader = get_test_loader(data_dir=args.data_dir, batch_size=100, **cuda_kwargs)
@@ -131,7 +132,7 @@ def test(epoch):
             inputs, targets = inputs.to(DEV), targets.to(DEV)
             print("------- Pre-forward ------")
             # fmt: off
-            import ipdb,os; ipdb.set_trace(context=30)  # noqa
+            #import ipdb,os; ipdb.set_trace(context=30)  # noqa
             # fmt: on
             outputs = model(inputs)
     end = timer()
