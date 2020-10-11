@@ -130,6 +130,9 @@ def test(epoch):
                 break
             inputs, targets = inputs.to(DEV), targets.to(DEV)
             print("------- Pre-forward ------")
+            # fmt: off
+            import ipdb,os; ipdb.set_trace(context=30)  # noqa
+            # fmt: on
             outputs = model(inputs)
     end = timer()
     return end - start
