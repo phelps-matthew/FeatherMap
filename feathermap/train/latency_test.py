@@ -1,4 +1,6 @@
-"""Train CIFAR10 with PyTorch."""
+"""Train CIFAR10 with PyTorch.
+Deploy mode only supported in CPU
+"""
 import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
@@ -114,8 +116,6 @@ if args.deploy:
 else:
     model.eval()
 
-print(cuda_kwargs)
-print("cudabench: {}".format(cudnn.benchmark))
 # Create dataloaders
 print("==> Preparing data..")
 test_loader = get_test_loader(data_dir=args.data_dir, batch_size=100, **cuda_kwargs)
@@ -128,12 +128,7 @@ def test(epoch):
     start = timer()
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(test_loader):
-            if batch_idx == 3:
-                break
-            inputs, targets = inputs.to(DEV), targets.to(DEV)
-            # fmt: off
-            #import ipdb,os; ipdb.set_trace(context=30)  # noqa
-            # fmt: on
+            inputs = inputs.to(DEV)
             outputs = model(inputs)
             print(outputs)
     end = timer()

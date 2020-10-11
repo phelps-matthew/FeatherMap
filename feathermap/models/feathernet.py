@@ -336,6 +336,7 @@ class FeatherNet(nn.Module):
     def train(self, mode: bool = True):
         """Remove forward hooks, load weights and biases.
         `self.eval()` calls self.train(False)"""
+        self.training = mode
         self.WandBtoV()
         return nn.Module.train(self.module, mode)
 
@@ -344,6 +345,7 @@ class FeatherNet(nn.Module):
         `self.eval()` calls self.train(False)"""
         if mode:
             nn.Module.train(self.module, mode=False)
+            self.training = False
             # Clear V weight matrix
             self.V = None
             # Add forward hooks
