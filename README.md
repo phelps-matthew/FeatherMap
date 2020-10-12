@@ -77,6 +77,11 @@ Putting these two ideas together, we can implement structured multi-hashing! Her
 
 Putting it all together, we have this process.
 <p align="center"> <img src="/references/smh_3.png"  width="800"> </p>
-What we have effectively done is reduce the number of *tunable parameters* from n^2 to 4n. Note that each weight in the global weight matrix must be calculated 'on the fly'. Putting it all together
+
+What we have effectively done is reduce the number of *tunable parameters* from n^2 to 4n, thus achieving the desired compression! 
+
+Additional Remarks:
+- To obtain a target compression factor, we generalize the dimension of the rows and columns from 2 to m, to thus begin with 2nm tunable parameters. The compression factor will then be 2nm/n^2 = 2m/n.
+- For practical deployment, in order to constrain RAM consumption, each weight must be calculated 'on the fly' during a foward pass. Such additional calculations will induce latency overhead, a consideration to keep in mind.
 
 
