@@ -66,12 +66,17 @@ As applied to a ResNet-34 architecture, trained and tested on CIFAR-10. Latency 
 
 ## What is Structured Multi-Hashing?
 There are two main concepts behind structured multi-hashing. The first concept is to take the weights of each *layer*, unfold them, and tile them into a single square  matrix. This *global weight matrix* represents the weights of the entire network.
-<p align="center"> <img src="/references/smh_1.png"  width="800"> </p>
+<p align="center"> <img src="/references/smh_1.png"  width="550"> </p>
 The next concept is purely linear algebra and it is the understanding that if we take a pair of columns and matrix-multiply them by a pair of rows, we obtain a square matrix.
-<p align="center"> <img src="/references/smh_2.png"  width="800"> </p>
+<p align="center"> <img src="/references/smh_2.png"  width="550"> </p>
 Putting these two ideas together, we can implement structured multi-hashing! Here's how it works:
 
-1. adsf
-2. adsf
+1. Let the total number of tunable parameters describing the entire network be the set of two rows (2 x n) and two columns (n x 2)
+2. Matrix multiply the columns and rows to obtain a square matrix of size (n x n)
+3. Map each element of the matrix above to each element in the *global weight matrix*
+
+Putting it all together, we have this process.
+<p align="center"> <img src="/references/smh_3.png"  width="800"> </p>
+What we have effectively done is reduce the number of *tunable parameters* from n^2 to 4n. Note that each weight in the global weight matrix must be calculated 'on the fly'. Putting it all together
 
 
