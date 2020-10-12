@@ -5,6 +5,7 @@ FeathetMap/feathermap/data/
 feathermap/data/
 feathermap/train/data/
 feathermap/train/checkpoint/
+feathermap/tests/analysis/
 ec2setup*
 *.ckpt
 
