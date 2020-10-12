@@ -43,7 +43,7 @@ optimizer.step()
 ```
 See `feathermap/models/` for a zoo of CV models to compress.
 ### Training
-Models are trained on CIFAR-10 using `main.py`. See the argument options by using the help flag `--h`.
+Models are trained on CIFAR-10 using `main.py`. See the argument options by using the help flag `--h`. Defaults to training ResNet-34.
 ```bash
 python main.py --compress 0.1
 ```
