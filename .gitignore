@@ -6,6 +6,7 @@ feathermap/data/
 feathermap/train/data/
 feathermap/train/checkpoint/
 ec2setup*
+*.ckpt
 
 #*.log
 # Byte-compiled / optimized / DLL files
