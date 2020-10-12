@@ -71,17 +71,17 @@ The next concept is purely linear algebra and it is the understanding that if we
 <p align="center"> <img src="/references/smh_2.png"  width="550"> </p>
 Putting these two ideas together, we can implement structured multi-hashing! Here's how it works:
 
-1. Let the total number of tunable parameters describing the entire network be the set of two rows <img src="https://render.githubusercontent.com/render/math?math=(2 \times n)"> and two columns <img src="https://render.githubusercontent.com/render/math?math=(n \times 2)">
-2. Matrix multiply the columns and rows to obtain a square matrix of size <img src="https://render.githubusercontent.com/render/math?math=(n \times n)">
+1. Let the total number of tunable parameters describing the entire network be the set of two rows (2 x n) and two columns (n x 2)
+2. Matrix multiply the columns and rows to obtain a square matrix of size (n x n)
 3. Map each element of the matrix above to each element in the *global weight matrix*
 
 Putting it all together, we have this process.
-<p align="center"> <img src="/references/smh_3.png"  width="800"> </p>
+<p align="center"> <img src="/references/smh_3.png"  width="900"> </p>
 
-What we have effectively done is reduce the number of *tunable parameters* from <img src="https://render.githubusercontent.com/render/math?math=n^2"> to <img src="https://render.githubusercontent.com/render/math?math=4n">, thus achieving the desired compression! 
+What we have effectively done is reduce the number of *tunable parameters* from n^2 to 4n, thus achieving the desired compression! 
 
 Additional Remarks:
-- To obtain a target compression factor, we generalize the dimension of the rows and columns from <img src="https://render.githubusercontent.com/render/math?math=2"> to <img src="https://render.githubusercontent.com/render/math?math=m">, to thus begin with <img src="https://render.githubusercontent.com/render/math?math=(2 \times n)"> tunable parameters. The compression factor will then be <img src="https://render.githubusercontent.com/render/math?math=\frac{2nm}{n^2} = 2mn">.
+- To obtain a target compression factor, we generalize the dimension of the rows and columns from 2 to m, to thus begin with (2 x n) tunable parameters. The compression factor will then be 2mn/n^2 = 2m/n
 - For practical deployment, in order to constrain RAM consumption, each weight must be calculated 'on the fly' during a foward pass. Such additional calculations will induce latency overhead; however, the 'structured' nature of this mulit-hashing approach embraces memory locality and I have found that for small compression factors the overhead is minimal (see [Results](#results)).
 
 
