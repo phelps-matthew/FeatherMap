@@ -3,6 +3,12 @@
 ## What is FeatherMap?
 FeatherMap is a tool that compresses deep neural networks. Centered around computer vision models, it implements the Google Research paper [Structured Multi-Hashing for Model Compression (CVPR 2020)](references/Structured_Multi-Hashing_for_Model_Compression_CVPR_2020.pdf). Taking the form of a Python package, the tool takes a user-defined PyTorch model and compresses it to a desired factor without modification to the underlying architecture. Using it's simple API, FeatherMap can easily be applied across a broad array of models. 
 
+## Table of Contents
+  * [Installation](#installation)
+  * [Usage](#usage)
+  * [Results](#results)
+  * [What is Structured Multi-Hashing?](#what-is-structured-multi-hashing-)
+
 ## Installation
 * Clone into directory `<my_dir>`
 ```
@@ -28,7 +34,7 @@ As applied to a ResNet-34 architecture, trained and tested on CIFAR-10. Latency 
 
 
 
-## What is Structured Multi-Hashing?
+## What is Structured Multi Hashing?
 <p align="center"> <img src="/references/smh1.png"  width="2500"> </p>
 
 
