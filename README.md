@@ -45,7 +45,7 @@ loss.backward()
 optimizer.step()
 ```
 ### Training
-Models may be trained using `main.py`. See the argument options by using the help flag `--h`.
+Models are trained using `main.py`. See the argument options by using the help flag `--h`.
 ```bash
 python main.py --compress 0.1
 ```
