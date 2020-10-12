@@ -5,8 +5,6 @@ from torch import Tensor
 from typing import Iterator, Tuple
 from math import ceil, sqrt
 import copy
-from timeit import default_timer as timer
-from feathermap.utils import timed
 
 
 class LoadLayer:
@@ -393,15 +391,10 @@ def main():
         frmodel = FeatherNet(rmodel, exclude=(nn.BatchNorm2d), compress=1.0).to(device)
         for name, module, kind in frmodel.get_WandB_modules():
             p = getattr(module, kind)
-            # print(name, kind, p.size())
-        # print("-" * 20)
-        # print("n = {}".format(frmodel.size_n))
-        start = timer()
+            print(name, kind, p.size())
         with torch.no_grad():
             for x in pic_gen():
                 frmodel(x)
-        end = timer()
-        print(100 / (end - start))
 
     res_test()
 
