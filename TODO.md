@@ -22,17 +22,17 @@
 - [ ] REST or GraphQL API (or microservice)
 - [X] GPU EC2 P2 check
 - [X] Find best `num_workers`; `num_workers=1` suggested
-- [ ] GPU EC2 P3 check
-- [ ] Fine-tuning based on param size
-	- [ ] Validation Set
-	- [ ] Early stopping w/ checkpoints
-	- [ ] Learning rate scheduler?
+- [X] GPU EC2 P3 check
+- [X] Hyperparams optimization based on param size
+	- [X] Validation Set
+	- [X] Early stopping w/ checkpoints
+	- [X] Learning rate scheduler?
 	- [ ] MLFlow
 - [ ] Toggle logging and printing or allow both
-	- [ ] Verbose mode
+	- [X] Verbose mode
 - [ ] Docker on EC2 (no GPU)
 - [ ] Docker on EC2 (GPU)
-- [ ] Compare timings of training and evaluation vs compression
+- [X] Compare timings of training and evaluation vs compression
 - [ ] S3 ?
 - [ ] Setup Travis CI
 - [X] Rename papers in ./references
