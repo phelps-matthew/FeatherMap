@@ -5,17 +5,16 @@ from torch import Tensor
 from typing import Iterator, Tuple
 from math import ceil, sqrt
 import copy
-from timeit import default_timer as timer
-from feathermap.utils import timed
 
 
 class LoadLayer:
     """Forward prehook for inner layers. Load weights and biases from V1 and V2
     calculating on the fly. Must be as fast as possible"""
 
-    def __init__(self, name, module, V1, V2, size_n, offset):
+    def __init__(self, name, module, V1, V2, size_n, offset, verbose=False):
         self.module = module
         self.name = name
+        self.verbose = verbose
         self.V1 = V1
         self.V2 = V2
         self.offset = offset
@@ -109,7 +108,8 @@ class LoadLayer:
         return (row_start, col_start, row_end, col_end)
 
     def __call__(self, module, inputs):
-        # print("prehook activated: {} {}".format(self.name, self.module))
+        if self.verbose:
+            print("prehook activated: {} {}".format(self.name, self.module))
         if len(self.ops) == 1:
             module.weight = self.mm_map(*self.ops).reshape(self.w_size)
         else:
@@ -221,6 +221,12 @@ class FeatherNet(nn.Module):
         """Return total number of weights and biases"""
         return sum(v.numel() for name, v in self.get_WandB())
 
+    def clear_WandB(self):
+        """Set weights and biases as empty tensors"""
+        for name, module, kind in self.get_WandB_modules():
+            tensor_size = getattr(module, kind).size()
+            setattr(module, kind, torch.empty(tensor_size))
+
     def get_WandB(self) -> Iterator[Tuple[str, Tensor]]:
         for name, module, kind in self.get_WandB_modules():
             yield name + "." + kind, getattr(module, kind)
@@ -236,7 +242,7 @@ class FeatherNet(nn.Module):
                     yield name, module, "weight"
                 if getattr(module, "bias") is not None:
                     yield name, module, "bias"
-            except nn.modules.module.ModuleAttributeError:
+            except AttributeError:
                 pass
 
     def get_WorB_modules(self) -> Iterator[Tuple[str, nn.Module]]:
@@ -248,15 +254,15 @@ class FeatherNet(nn.Module):
                     continue
                 if getattr(module, "weight") is not None:
                     yield name, module
-            except nn.modules.module.ModuleAttributeError:
+            except AttributeError:
                 pass
 
-    def register_inter_hooks(self):
+    def register_hooks(self):
         prehooks, posthooks, prehook_callables = [], [], []
         offset = -1
         for name, module in self.get_WorB_modules():
             # Create callable prehook object; see LoadLayer; update running V.view(-1, 1) index
-            prehook_callable = LoadLayer(name, module, self.V1, self.V2, self.size_n, offset)
+            prehook_callable = LoadLayer(name, module, self.V1, self.V2, self.size_n, offset, self.verbose)
             offset += prehook_callable.w_num
 
             # Register hooks
@@ -267,6 +273,7 @@ class FeatherNet(nn.Module):
             prehooks.append(prehook_handle)
             posthooks.append(posthook_handle)
             prehook_callables.append(prehook_callable)
+
         # Pass handles into attributes
         self.prehooks = prehooks
         self.posthooks = posthooks
@@ -277,12 +284,6 @@ class FeatherNet(nn.Module):
         if hooks is not None:
             for hook in hooks:
                 hook.remove()
-            # Set weights and biases to empty (non None) tensors; necessary for training mode
-            if hooks is self.prehooks:
-                for layer_obj in self.prehook_callables:
-                    layer_obj.module.weight = torch.empty(layer_obj.w_size)
-                    if layer_obj.bias:
-                        layer_obj.module.bias = torch.empty(layer_obj.b_size)
 
     def unregister_params(self) -> None:
         """Delete params, set attributes as Tensors of prior data,
@@ -333,24 +334,29 @@ class FeatherNet(nn.Module):
     def train(self, mode: bool = True):
         """Remove forward hooks, load weights and biases.
         `self.eval()` calls self.train(False)"""
+        self.training = mode
         self.WandBtoV()
-        return nn.Module.train(self, mode)
+        return nn.Module.train(self.module, mode)
 
-    def train_stream(self, mode: bool = True):
-        """Remove forward hooks, load weights and biases.
+    def deploy(self, mode: bool = True):
+        """Whether in train or eval mode, activate deploy mode
         `self.eval()` calls self.train(False)"""
-        # Remove forward hooks
         if mode:
+            nn.Module.train(self.module, mode=False)
+            self.training = False
+            # Clear V weight matrix
+            self.V = None
+            # Add forward hooks
+            self.register_hooks()
+            # Clear weights and biases
+            self.clear_WandB()
+
+        # Remove forward hooks
+        else:
             self.unregister_hooks(self.prehooks)
             self.unregister_hooks(self.posthooks)
             self.unregister_hooks(self.prehook_outer)
             self.WandBtoV()
-        # eval mode
-        else:
-            # Clear V weight matrix
-            self.V = None
-            # Add forward hooks
-            self.register_inter_hooks()
 
     def forward(self, x):
         if self.training:
@@ -385,15 +391,10 @@ def main():
         frmodel = FeatherNet(rmodel, exclude=(nn.BatchNorm2d), compress=1.0).to(device)
         for name, module, kind in frmodel.get_WandB_modules():
             p = getattr(module, kind)
-            # print(name, kind, p.size())
-        # print("-" * 20)
-        # print("n = {}".format(frmodel.size_n))
-        start = timer()
+            print(name, kind, p.size())
         with torch.no_grad():
             for x in pic_gen():
                 frmodel(x)
-        end = timer()
-        print(100 / (end - start))
 
     res_test()
 
