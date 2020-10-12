@@ -10,7 +10,7 @@ FeatherMap is a tool that compresses deep neural networks. Centered around compu
   * [What is Structured Multi-Hashing?](#what-is-structured-multi-hashing)
 
 ## Installation
-* Clone into directory `<my_dir>`
+* Clone into directory
 ```
 git clone https://github.com/phelps-matthew/FeatherMap.git
 cd FeatherMap
