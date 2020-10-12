@@ -130,7 +130,6 @@ def test(epoch):
         for batch_idx, (inputs, targets) in enumerate(test_loader):
             inputs = inputs.to(DEV)
             outputs = model(inputs)
-            print(outputs)
     end = timer()
     return end - start
 
