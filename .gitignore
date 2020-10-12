@@ -5,6 +5,7 @@ FeathetMap/feathermap/data/
 feathermap/data/
 feathermap/train/data/
 feathermap/train/checkpoint/
+ec2setup*
 
 #*.log
 # Byte-compiled / optimized / DLL files
