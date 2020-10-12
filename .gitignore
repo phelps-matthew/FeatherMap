@@ -1,11 +1,13 @@
 # MP
 env/
 data/
-FeathetMap/feathermap/data/
+FeatherMap/feathermap/data/
 feathermap/data/
 feathermap/train/data/
 feathermap/train/checkpoint/
-feathermap/tests/analysis/
+FeatherMap/tests/analysis/
+FeatherMap/tests/test_streamlit.py
+FeatherMap/tests/generator_test.py
 ec2setup*
 *.ckpt
 
