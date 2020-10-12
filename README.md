@@ -27,9 +27,37 @@ pip install <my_dir>
 pip install -e <my_dir>
 ```
 ## Usage
+### General Usage
+To apply to a ResNet-34, simply import the model and wrap with `FeatherNet` module, selecting desired compression.
+```python
+from feathermap.models.resnet import ResNet34
+from feathermap.feathernet import FeatherNet
 
+base_model = ResNet34()
+model = FeatherNet(base_model, compress=0.10)
+
+# Forward pass ...
+y = model(x)
+loss = criterion(y, target)
+
+# Backward and optimize ...
+loss.backward()
+optimizer.step()
+```
+### Training
+Models may be trained using `main.py`. See the argument options by using the help flag `--h`.
+```bash
+python main.py --compress 0.1
+```
+### Deployment
+Upon defining your `FeatherNet` model, switch to deploy mode to calculate weights on the fly
+```python
+base_model = ResNet34()
+model = FeatherNet(base_model, compress=0.10)
+model.deploy()
+```
 ## Results
-As applied to a ResNet-34 architecture, trained and tested on CIFAR-10. Latency benchmarked on AWS c5a.8xlarge iterating over 30k images with batch size of 100.
+As applied to a ResNet-34 architecture, trained and tested on CIFAR-10. Latency benchmarked on CPU (AWS c5a.8xlarge) iterating over 30k images with batch size of 100.
 <p align="center"> <img src="/references/resnet34_acc_latency.png"  width="2500"> </p>
 
 
