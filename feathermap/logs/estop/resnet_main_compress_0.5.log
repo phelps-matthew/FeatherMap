@@ -1,7 +1,0 @@
-[2020-09-30 09:28:38,096] INFO - Some torch.cuda functionality unavailable
-[2020-09-30 09:28:40,513] DEBUG - Using selector: EpollSelector
-[2020-09-30 09:28:40,788] DEBUG - Using selector: EpollSelector
-[2020-09-30 09:28:40,823] DEBUG - Using selector: EpollSelector
-[2020-09-30 09:29:04,440] DEBUG - Using selector: EpollSelector
-[2020-09-30 09:29:10,497] DEBUG - Using selector: EpollSelector
-[2020-09-30 09:30:04,560] DEBUG - Using selector: EpollSelector
