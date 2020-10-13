@@ -82,6 +82,6 @@ What we have effectively done with this mapping is a reduction of the number of 
 
 Additional Remarks:
 - To obtain a target compression factor, we generalize the respective dimension of the rows and columns from 2 to m, to thus begin with a total of 2mn tunable parameters. The compression factor will then be 2mn/n^2 = 2m/n. By varying m, we can achieve varying levels of compression.
-- For practical deployment, in order to constrain RAM consumption, each weight must be calculated 'on the fly' during the foward pass. Such additional calculations will induce latency overhead; however, the 'structured' nature of this mulit-hashing approach embraces memory locality and I have found that for small compression factors the overhead is minimal (see [Results](#results)).
+- For practical deployment, in order to constrain RAM consumption each weight must be calculated 'on the fly' during the foward pass. Such additional calculations will induce latency overhead; however, the 'structured' nature of this multi-hashing approach embraces memory locality and I have found that for small compression factors the overhead is minimal (see [Results](#results)).
 
 
