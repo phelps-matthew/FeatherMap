@@ -8,8 +8,8 @@ import copy
 
 
 class LoadLayer:
-    """Forward prehook for inner layers. Load weights and biases from V1 and V2
-    calculating on the fly. Must be as fast as possible"""
+    """Forward prehook for inner layers. Load weights and biases from V1 and V2,
+    calculating on the fly. Must be as optimized as possible."""
 
     def __init__(self, name, module, V1, V2, size_n, offset, verbose=False):
         self.module = module
@@ -33,14 +33,25 @@ class LoadLayer:
         self.ops = self.get_list_ops()
 
     def get_list_ops(self):
+        """Helper function to return list of operands"""
         ops = self.get_idx_splits()
         return [ops[k] for k in ops]
 
     def mm_map(self, a):
+        """Helper function for matrix multiplication, including scale parameter"""
         return self.w_p * torch.matmul(*a).view(-1, 1)
 
     def get_idx_splits(self):
-        """Obeys index slicing"""
+        """Generate the set of operands corresponding to partial or full rows. E.g.
+
+        | _ x x x |            | x x x |
+        | x x x x |  ------>             + | x x x x |
+        | x x x x |                        | x x x x | +
+        | x x _ _ |                                      | x x |
+
+        Necessary to make the most use of vectorized matrix multiplication. Sequentially
+        calculating V[i, j] = V1[i, :] @ V2[:, j] leads to large latency.
+        """
         row_start, col_start, row_end, col_end = self.get_index_range()
         row_start_full, row_end_full = False, False
         V1 = self.V1
@@ -102,6 +113,7 @@ class LoadLayer:
             }
 
     def get_index_range(self):
+        """Return global weight index range associated with given layer"""
         offset = self.offset + 1
         row_start, col_start = divmod(offset, self.size_n)
         row_end, col_end = divmod(offset + self.w_num - 1, self.size_n)
@@ -152,8 +164,12 @@ class FeatherNet(nn.Module):
         # Check compression range
         self.max_compress = self.get_max_compression()
         if compress < self.max_compress and self.constrain:
-            print( ( "Due to streaming layer weight allocation, cannot compress beyond {:.4f}."
-                    + "Setting compression to {:.4f}").format(self.max_compress, self.max_compress))
+            print(
+                (
+                    "Due to streaming layer weight allocation, cannot compress beyond {:.4f}."
+                    + "Setting compression to {:.4f}"
+                ).format(self.max_compress, self.max_compress)
+            )
             self.compress = self.max_compress
         else:
             self.compress = compress
@@ -262,7 +278,9 @@ class FeatherNet(nn.Module):
         offset = -1
         for name, module in self.get_WorB_modules():
             # Create callable prehook object; see LoadLayer; update running V.view(-1, 1) index
-            prehook_callable = LoadLayer(name, module, self.V1, self.V2, self.size_n, offset, self.verbose)
+            prehook_callable = LoadLayer(
+                name, module, self.V1, self.V2, self.size_n, offset, self.verbose
+            )
             offset += prehook_callable.w_num
 
             # Register hooks
@@ -323,7 +341,6 @@ class FeatherNet(nn.Module):
                     "Check module exclusion list. Note, cannot calculate fan_in\
                     for BatchNorm2d layers."
                 )
-                raise TypeError
 
     def load_state_dict(self, *args, **kwargs):
         """Update weights and biases from stored V1, V2 values"""
@@ -333,14 +350,14 @@ class FeatherNet(nn.Module):
 
     def train(self, mode: bool = True):
         """Remove forward hooks, load weights and biases.
-        `self.eval()` calls self.train(False)"""
+        `self.eval()` calls `self.train(False)`"""
         self.training = mode
         self.WandBtoV()
         return nn.Module.train(self.module, mode)
 
     def deploy(self, mode: bool = True):
         """Whether in train or eval mode, activate deploy mode
-        `self.eval()` calls self.train(False)"""
+        `self.eval()` calls `self.train(False)`"""
         if mode:
             nn.Module.train(self.module, mode=False)
             self.training = False
@@ -367,7 +384,7 @@ class FeatherNet(nn.Module):
         return output
 
 
-def main():
+def tests():
     from feathermap.models.resnet import ResNet, ResidualBlock
 
     # Device configuration
@@ -401,6 +418,6 @@ def main():
 
 if __name__ == "__main__":
     try:
-        main()
+        tests()
     except KeyboardInterrupt:
         exit()

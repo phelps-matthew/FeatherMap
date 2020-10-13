@@ -10,8 +10,8 @@ from torch.optim.lr_scheduler import MultiStepLR
 import os
 import argparse
 from feathermap.utils import progress_bar
-from feathermap.train.models.resnet import ResNet34
-from feathermap.models.feathernet import FeatherNet
+from feathermap.models.resnet import ResNet34
+from feathermap.feathernet import FeatherNet
 from feathermap.data_loader import get_train_valid_loader, get_test_loader
 
 parser = argparse.ArgumentParser(
