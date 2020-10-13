@@ -51,7 +51,7 @@ Models are trained on CIFAR-10 using `main.py`. See the argument options by usin
 python main.py --compress 0.1
 ```
 ### Deployment
-Upon defining your `FeatherNet` model, switch to deploy mode to calculate weights on the fly (see [What is Structured Multi-Hashing?][#what-is-structured-multi-hashing]
+Upon defining your `FeatherNet` model, switch to deploy mode to calculate weights on the fly (see [What is Structured Multi-Hashing?](#what-is-structured-multi-hashing)).
 ```python
 base_model = ResNet34()
 model = FeatherNet(base_model, compress=0.10)
