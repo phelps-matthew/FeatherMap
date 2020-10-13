@@ -13,13 +13,14 @@
 - [X] Docker containerization locally
 - [X] Add logging for training times and accuracy
 - [X] Add validation dataloader
-- [ ] Compute weights 'on the fly' from variable pool
+- [X] Compute weights 'on the fly' from variable pool
 	- [X] forward() prehook and posthook
 	- [X] global method
-	- [ ] create train/eval switch, possibly serialized flag
+	- [X] create deploy() mode (method)
 	- [ ] test on the fly calcs, ensuring same accuracy results
 	- [X] obtain minimum allowable compression
-- [ ] REST or GraphQL API (or microservice)
+- [ ] deploy() on GPU
+- [ ] ~~REST or GraphQL API (or microservice)~~
 - [X] GPU EC2 P2 check
 - [X] Find best `num_workers`; `num_workers=1` suggested
 - [X] GPU EC2 P3 check
@@ -27,16 +28,22 @@
 	- [X] Validation Set
 	- [X] Early stopping w/ checkpoints
 	- [X] Learning rate scheduler?
-	- [ ] MLFlow
+	- [ ] ~~MLFlow~~
 - [ ] Toggle logging and printing or allow both
 	- [X] Verbose mode
-- [ ] Docker on EC2 (no GPU)
+	- [ ] Change verbose to debug mode
+- [X] Docker on EC2 (no GPU)
 - [ ] Docker on EC2 (GPU)
 - [X] Compare timings of training and evaluation vs compression
-- [ ] S3 ?
+- [ ] ~~S3 ?~~
 - [ ] Setup Travis CI
 - [X] Rename papers in ./references
 - [ ] Analyze residual blocks
-- [ ] Clean up all code, reorganize structure
-- [ ] Create Readme
+- [ ] Reorganize structure
+- [ ] Add docstrings
+- [ ] Public/private methods and attributes
+- [X] Create Readme
+	- [ ] API usage
 - [ ] Sphinx documentation
+- [ ] Pypl publish
+- [ ] Conda publish
