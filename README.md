@@ -60,7 +60,7 @@ model.deploy()
 
 ## Results
 Below are results as applied to a ResNet-34 architecture, trained and tested on CIFAR-10. Latency benchmarked on CPU (AWS c5a.8xlarge) iterating over 30k images with batch size of 100. To add some context, we can compress ResNet-34 to 2% of its original size while still achieving over 90% accuracy (a 5% accuracy drop compared to the base model), while incurring only a 4% increase in latency time.
-<p align="center"> <img src="/references/resnet34_acc_latency.png"  width="2500"> </p>
+<p align="center"> <img src="/references/resnet34_acc_latency.png"  width="5000"> </p>
 
 
 
