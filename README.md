@@ -18,11 +18,11 @@ FeatherMap is a tool that compresses deep neural networks. Centered around compu
 git clone https://github.com/phelps-matthew/FeatherMap.git
 cd FeatherMap
 ```
-* Install (editable) package via pip
+* Pip Install
 ``` 
 pip install -e .
 ```
-* or conda
+* Conda Install
 ```
 conda develop .
 ```
