@@ -46,10 +46,12 @@ optimizer.step()
 ```
 See `feathermap/models/` for a zoo of CV models to compress.
 ### Training
-Models are trained on CIFAR-10 using `main.py`. See the argument options by using the help flag `--h`. Defaults to training ResNet-34.
+Models are trained on CIFAR-10 using `main.py` (fefaults to training ResNet-34). See the argument options by using the help flag `--help`.
 ```bash
 python main.py --compress 0.1
 ```
+<p align="center"> <img src="/references/feathermap_train_short.gif"  width="700"> </p>
+
 ### Deployment
 Upon defining your `FeatherNet` model, switch to deploy mode to calculate weights on the fly (see [What is Structured Multi-Hashing?](#what-is-structured-multi-hashing)).
 ```python
