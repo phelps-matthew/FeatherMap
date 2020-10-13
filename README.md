@@ -50,7 +50,6 @@ Models are trained on CIFAR-10 using `main.py` (fefaults to training ResNet-34).
 ```bash
 python main.py --compress 0.1
 ```
-<p align="center"> <img src="/references/feathermap_train_short.gif"  width="700"> </p>
 
 ### Deployment
 Upon defining your `FeatherNet` model, switch to deploy mode to calculate weights on the fly (see [What is Structured Multi-Hashing?](#what-is-structured-multi-hashing)).
