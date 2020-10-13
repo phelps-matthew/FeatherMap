@@ -65,7 +65,7 @@ As applied to a ResNet-34 architecture, trained and tested on CIFAR-10. Latency 
 
 
 ## What is Structured Multi-Hashing?
-There are two main concepts behind structured multi-hashing. The first concept is to take the weights of each *layer*, unfold them, and tile them into a single square  matrix. This *global weight matrix* represents the weights of the entire network.
+There are two main concepts behind structured multi-hashing. The first concept is to take the weights of each *layer*, flatten them, and tile them into a single square  matrix. This *global weight matrix* represents the weights of the entire network.
 <p align="center"> <img src="/references/smh_1.png"  width="550"> </p>
 The second concept is purely linear algebra and it is the understanding that if we take a pair of columns and matrix-multiply them by a pair of rows, we obtain a square matrix.
 <p align="center"> <img src="/references/smh_2.png"  width="550"> </p>
