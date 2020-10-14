@@ -60,7 +60,7 @@ model.deploy()
 ```
 
 ## Results
-Below are results as applied to a ResNet-34 architecture, trained and tested on CIFAR-10. Latency benchmarked on CPU (AWS c5a.8xlarge) iterating over 30k images with batch size of 100. To add some context, we can compress ResNet-34 to 2% of its original size while still achieving over 90% accuracy (a 5% accuracy drop compared to the base model), while incurring only a 4% increase in latency time.
+Below are results as applied to a ResNet-34 architecture, trained and tested on CIFAR-10. Latency benchmarked on CPU (AWS c5a.8xlarge) iterating over 30k images with batch size of 100. To add some context, one can compress ResNet-34 to 2% of its original size while still achieving over 90% accuracy (a 5% accuracy drop compared to the base model), while incurring only a 4% increase in latency time.
 <p align="center"> <img src="/references/resnet34_acc_latency.png"  width="5000"> </p>
 
 
@@ -82,7 +82,7 @@ Putting it all together, we have this process.
 What we have effectively done with this mapping is a reduction of the number of *tunable parameters* from n^2 to 4n, thus achieving the desired compression! 
 
 Additional Remarks:
-- To obtain a target compression factor, we generalize the respective dimension of the rows and columns from 2 to m, to thus begin with a total of 2mn tunable parameters. The compression factor will then be 2mn/n^2 = 2m/n. By varying m, we can achieve varying levels of compression.
-- For practical deployment, in order to constrain RAM consumption each weight must be calculated 'on the fly' during the foward pass. Such additional calculations will induce latency overhead; however, the 'structured' nature of this multi-hashing approach embraces memory locality and I have found that for small compression factors the overhead is minimal (see [Results](#results)).
+- To obtain a target compression factor, generalize the respective dimension of the rows and columns from 2 to m, to thus begin with a total of 2mn tunable parameters. The compression factor will then be 2mn/n^2 = 2m/n. By varying m, one can achieve varying levels of compression.
+- For practical deployment, in order to constrain RAM consumption, each weight must be calculated 'on the fly' during the foward pass. Such additional calculations will induce latency overhead; however, the 'structured' nature of this multi-hashing approach embraces memory locality and I have found that for small compression factors the overhead is minimal (see [Results](#results)).
 
 
