@@ -22,26 +22,48 @@ class LoadLayer:
         self.w_size = module.weight.size()
         self.w_num = module.weight.numel()
         self.w_p = module.weight_p  # weight scaler
-        self.num = self.w_num
         self.bias = module.bias is not None
         if self.bias:
             self.b_size = module.bias.size()
             self.b_num = module.bias.numel()
-            self.num += self.b_num
             self.b_p = module.bias_p  # bias scaler
 
-        self.ops = self.get_list_ops()
+        self.w_ops = None
+        self.b_ops = None
+        self.set_operands()
 
-    def get_list_ops(self):
-        """Helper function to return list of operands"""
-        ops = self.get_idx_splits()
-        return [ops[k] for k in ops]
+    def get_weight_index_range(self):
+        """Return global weight index range associated with given layer"""
+        i1, j1 = divmod(self.offset + 1, self.size_n)
+        i2, j2 = divmod(self.offset + self.w_num, self.size_n)
+        self.offset += self.w_num
+        return (i1, j1, i2, j2)
 
-    def mm_map(self, a):
-        """Helper function for matrix multiplication, including scale parameter"""
-        return self.w_p * torch.matmul(*a).view(-1, 1)
+    def get_bias_index_range(self):
+        """Return global weight index range associated with given layer"""
+        i1, j1 = divmod(self.offset + 1, self.size_n)
+        i2, j2 = divmod(self.offset + self.b_num, self.size_n)
+        self.offset += self.b_num
+        return (i1, j1, i2, j2)
 
-    def get_idx_splits(self):
+    @staticmethod
+    def get_block_rows(i: int, j: int, numels: int, n: int) -> list[int]:
+        """Get list of full rows in an (n x n) matrix starting at index [i,j]
+        and spanning numels elements. Returns row numbers"""
+        j_start = j == 0
+        rows = []
+        for x in range(numels):
+            if j > n:
+                if j_start:
+                    rows.append(i)
+                i += 1
+                j = 0
+                j_start = True
+            j += 1
+        return rows
+
+    @staticmethod
+    def get_row_set(V1, V2, i1, j1, i2, j2, numels, n):
         """Generate the set of operands corresponding to partial or full rows. E.g.
 
         | _ x x x |            | x x x |
@@ -52,85 +74,75 @@ class LoadLayer:
         Necessary to make the most use of vectorized matrix multiplication. Sequentially
         calculating V[i, j] = V1[i, :] @ V2[:, j] leads to large latency.
         """
-        row_start, col_start, row_end, col_end = self.get_index_range()
-        row_start_full, row_end_full = False, False
-        V1 = self.V1
-        V2 = self.V2
-        if col_start == 0:
-            row_start_full = True
-        if col_end == self.size_n - 1:
-            row_end_full = True
-        if row_start_full and row_end_full:
-            return {"start": (V1[row_start : row_end + 1, :], V2[:])}
-        if row_start_full:
-            # at least one additional full row, no full end
-            if row_end - row_start >= 2:
-                return {
-                    "start": (V1[row_start:row_end, :], V2[:]),
-                    "end": (V1[row_end, :], V2[:, : col_end + 1]),
-                }
-            # spans two rows, start row is full
-            elif row_end - row_start == 1:
-                return {
-                    "start": (V1[row_start, :], V2[:]),
-                    "end": (V1[row_end, :], V2[:, : col_end + 1]),
-                }
-            # spans single row
-            else:
-                return {"start": (V1[row_start, :], V2[:, : col_end + 1])}
-        if row_end_full:
-            # at least one additional full row, no full start
-            if row_end - row_start >= 2:
-                return {
-                    "start": (V1[row_start, :], V2[:, col_start:]),
-                    "end": (V1[row_start + 1 : row_end + 1, :], V2[:]),
-                }
-            # spans two rows, end row is full
-            elif row_end - row_start == 1:
-                return {
-                    "start": (V1[row_start, :], V2[:, col_start:]),
-                    "end": (V1[row_end, :], V2[:]),
-                }
-            else:
-                return {"start": (V1[row_start, :], V2[:, col_start:])}
-        if row_end - row_start >= 2:
-            # at least one full row
-            return {
-                "start": (V1[row_start, :], V2[:, col_start:]),
-                "mid": (V1[row_start + 1 : row_end, :], V2[:]),
-                "end": (V1[row_end, :], V2[:, : col_end + 1]),
-            }
-        elif row_end - row_start == 1:
-            # spans two rows, both incomplete
-            return {
-                "start": (V1[row_start, :], V2[:, col_start:]),
-                "end": (V1[row_end, :], V2[:, : col_end + 1]),
-            }
+        ops = dict()
+        block_rows = LoadLayer.get_block_rows(i1, j1, numels, n)
+        # Only one row, return whether complete or incomplete
+        if i2 - i1 == 0:
+            ops["top"] = (V1[i1, :], V2[:, j1 : j2 + 1])
+            return ops
+        # Has block rows
+        if len(block_rows) != 0:
+            ops["block"] = (V1[block_rows, :], V2)
+            for row in range(i1, i2 + 1):
+                if row not in block_rows:
+                    if row < min(block_rows):
+                        ops["top"] = (V1[row, :], V2[:, j1:])
+                    else:
+                        ops["bottom"] = (V1[row, :], V2[:, : j2 + 1])
+            return ops
+        # Two rows, no blocks
         else:
-            return {
-                "start": (V1[row_start, :], V2[:, col_start]),
-                "end": (V1[row_end, :], V2[:, col_end]),
-            }
+            ops["top"] = (V1[i1, :], V2[:, j1:])
+            ops["bottom"] = (V1[i2, :], V2[:, : j2 + 1])
+            return ops
 
-    def get_index_range(self):
-        """Return global weight index range associated with given layer"""
-        offset = self.offset + 1
-        i1, j1 = divmod(offset, self.size_n)
-        i2, j2 = divmod(offset + self.w_num - 1, self.size_n)
-        return (i1, j1, i2, j2)
+    def set_operands(self):
+        """Set weight and bias attributes corresponding to operands of V1 and V2"""
+        w_ops_dict = self.get_row_set(
+            self.V1, self.V2, *self.get_weight_index_range(), self.w_num, self.size_n
+        )
+        self.w_ops = [w_ops_dict[k] for k in w_ops_dict]
+        if self.bias:
+            b_ops_dict = self.get_row_set(
+                self.V1, self.V2, *self.get_bias_index_range(), self.b_num, self.size_n
+            )
+            self.b_ops = [b_ops_dict[k] for k in b_ops_dict]
+
+    def mm_map(self, a):
+        """Helper function for matrix multiplication, including scale parameter"""
+        return self.w_p * torch.matmul(*a).view(-1, 1)
 
     def __call__(self, module, inputs):
         if self.verbose:
             print("prehook activated: {} {}".format(self.name, self.module))
-        if len(self.ops) == 1:
-            module.weight = self.mm_map(*self.ops).reshape(self.w_size)
+
+        # Load weights
+        if len(self.w_ops) == 1:
+            module.weight = self.mm_map(*self.w_ops).reshape(self.w_size)
         else:
-            a = tuple(map(self.mm_map, self.ops))
+            a = tuple(map(self.mm_map, self.w_ops))
             module.weight = torch.cat(a).reshape(self.w_size)
 
+        # Load biases
         if self.bias:
-            b = torch.rand(self.b_num)
-            module.bias = b.reshape(self.b_size)
+            if len(self.b_ops) == 1:
+                module.bias = self.mm_map(*self.b_ops).reshape(self.b_size)
+            else:
+                a = tuple(map(self.mm_map, self.b_ops))
+                module.bias = torch.cat(a).reshape(self.b_size)
+
+
+class UnloadLayer:
+    """Forward posthook callable class with verbose switch"""
+
+    verbose = False
+
+    @classmethod
+    def __call__(cls, module, inputs, outputs):
+        if UnloadLayer.verbose:
+            print("posthook activated: {}".format(module))
+        module.weight = None
+        module.bias = None
 
 
 def unload_layer(module, inputs, outputs):
@@ -160,6 +172,7 @@ class FeatherNet(nn.Module):
         self.prehooks = None
         self.posthooks = None
         self.prehook_callables = None
+        self.posthook_callable = None
 
         # Check compression range
         self.max_compress = self.get_max_compression()
@@ -195,7 +208,7 @@ class FeatherNet(nn.Module):
         torch.nn.init.uniform_(self.V2, -bound, bound)
 
     def WandBtoV(self):
-        """Needs to be efficient"""
+        """Calculate V = V1*V2 and allocate to all weights and biases"""
         self.V = torch.matmul(self.V1, self.V2)
         V = self.V.view(-1, 1)  # V.is_contiguous() = True
         i = 0
@@ -282,10 +295,16 @@ class FeatherNet(nn.Module):
                 name, module, self.V1, self.V2, self.size_n, offset, self.verbose
             )
             offset += prehook_callable.w_num
+            if getattr(module, "bias", None):
+                offset += prehook_callable.b_num
+
+            # Create callable posthook object
+            posthook_callable = UnloadLayer()
+            posthook_callable.verbose = self.verbose
 
             # Register hooks
             prehook_handle = module.register_forward_pre_hook(prehook_callable)
-            posthook_handle = module.register_forward_hook(unload_layer)
+            posthook_handle = module.register_forward_hook(posthook_callable)
 
             # Collect removable handles
             prehooks.append(prehook_handle)
@@ -296,6 +315,7 @@ class FeatherNet(nn.Module):
         self.prehooks = prehooks
         self.posthooks = posthooks
         self.prehook_callables = prehook_callables
+        self.posthook_callable = posthook_callable
 
     def unregister_hooks(self, hooks):
         # Remove hooks
@@ -385,7 +405,7 @@ class FeatherNet(nn.Module):
 
 
 def tests():
-    from feathermap.models.resnet import ResNet, ResidualBlock
+    from feathermap.models.resnet import ResNet34
 
     # Device configuration
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -404,14 +424,17 @@ def tests():
             for i in range(100):
                 yield torch.randn([1, 3, 32, 32])
 
-        rmodel = ResNet(ResidualBlock, [2, 2, 2]).to(device)
-        frmodel = FeatherNet(rmodel, exclude=(nn.BatchNorm2d), compress=1.0).to(device)
-        for name, module, kind in frmodel.get_WandB_modules():
+        base_model = ResNet34().to(device)
+        model = FeatherNet(base_model, exclude=(nn.BatchNorm2d), compress=0.5).to(device)
+        for name, module, kind in model.get_WandB_modules():
             p = getattr(module, kind)
             print(name, kind, p.size())
+        # fmt: off
+        import ipdb,os; ipdb.set_trace(context=30)  # noqa
+        # fmt: on
         with torch.no_grad():
             for x in pic_gen():
-                frmodel(x)
+                model(x)
 
     res_test()
 
