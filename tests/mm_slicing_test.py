@@ -15,27 +15,27 @@ def get_block_rows(i, j, numels, n):
     return rows
 
 
-def get_row_set(V1, V2, i1, j1, i2, j2, numels, n):
+ def get_row_set(V1, V2, i1, j1, i2, j2, numels, n):
     ops = {}
     block_rows = get_block_rows(i1, j1, numels, n)
     # Only one row, return whether complete or incomplete
     if i2 - i1 == 0:
-        ops["a"] = (V1[i1, :], V2[:, j1 : j2 + 1])
+        ops["top"] = (V1[i1, :], V2[:, j1 : j2 + 1])
         return ops
     # Has block rows
     if len(block_rows) != 0:
-        ops["b"] = (V1[block_rows, :], V2)
+        ops["block"] = (V1[block_rows, :], V2)
         for row in range(i1, i2 + 1):
             if row not in block_rows:
                 if row < min(block_rows):
-                    ops["a"] = (V1[row, :], V2[:, j1:])
+                    ops["top"] = (V1[row, :], V2[:, j1:])
                 else:
-                    ops["c"] = (V1[row, :], V2[:, : j2 + 1])
+                    ops["bottom"] = (V1[row, :], V2[:, : j2 + 1])
         return ops
     # Two rows, no blocks
     else:
-        ops["a"] = (V1[i1, :], V2[:, j1:])
-        ops["c"] = (V1[i2, :], V2[:, : j2 + 1])
+        ops["top"] = (V1[i1, :], V2[:, j1:])
+        ops["bottom"] = (V1[i2, :], V2[:, : j2 + 1])
         return ops
 
 
@@ -44,22 +44,22 @@ def get_row_set_V(V, i1, j1, i2, j2, numels, n):
     block_rows = get_block_rows(i1, j1, numels, n)
     # Only one row, return whether complete or incomplete
     if i2 - i1 == 0:
-        ops["a"] = V[i1, j1 : j2 + 1]
+        ops["top"] = V[i1, j1 : j2 + 1]
         return ops
     # Has block rows
     if len(block_rows) != 0:
-        ops["b"] = V[block_rows, :]
+        ops["block"] = V[block_rows, :]
         for row in range(i1, i2 + 1):
             if row not in block_rows:
                 if row < min(block_rows):
-                    ops["a"] = V[row, j1:]
+                    ops["top"] = V[row, j1:]
                 else:
-                    ops["c"] = V[row, : j2 + 1]
+                    ops["bottom"] = V[row, : j2 + 1]
         return ops
     # Two rows, no blocks
     else:
-        ops["a"] = V[i1, j1:]
-        ops["c"] = V[i2, : j2 + 1]
+        ops["top"] = V[i1, j1:]
+        ops["bottom"] = V[i2, : j2 + 1]
         return ops
 
 

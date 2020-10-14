@@ -115,9 +115,9 @@ class LoadLayer:
     def get_index_range(self):
         """Return global weight index range associated with given layer"""
         offset = self.offset + 1
-        row_start, col_start = divmod(offset, self.size_n)
-        row_end, col_end = divmod(offset + self.w_num - 1, self.size_n)
-        return (row_start, col_start, row_end, col_end)
+        i1, j1 = divmod(offset, self.size_n)
+        i2, j2 = divmod(offset + self.w_num - 1, self.size_n)
+        return (i1, j1, i2, j2)
 
     def __call__(self, module, inputs):
         if self.verbose:
