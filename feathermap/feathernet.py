@@ -7,139 +7,6 @@ from math import ceil, sqrt
 import copy
 
 
-class LoadLayer:
-    """Forward prehook for inner layers. Load weights and biases from V1 and V2,
-    calculating on the fly. Must be as optimized as possible."""
-
-    def __init__(self, name, module, V1, V2, size_n, offset, verbose=False):
-        self.module = module
-        self.name = name
-        self.verbose = verbose
-        self.V1 = V1
-        self.V2 = V2
-        self.offset = offset
-        self.size_n = size_n
-        self.w_size = module.weight.size()
-        self.w_num = module.weight.numel()
-        self.w_p = module.weight_p  # weight scaler
-        self.num = self.w_num
-        self.bias = module.bias is not None
-        if self.bias:
-            self.b_size = module.bias.size()
-            self.b_num = module.bias.numel()
-            self.num += self.b_num
-            self.b_p = module.bias_p  # bias scaler
-
-        self.ops = self.get_list_ops()
-
-    def get_list_ops(self):
-        """Helper function to return list of operands"""
-        ops = self.get_idx_splits()
-        return [ops[k] for k in ops]
-
-    def mm_map(self, a):
-        """Helper function for matrix multiplication, including scale parameter"""
-        return self.w_p * torch.matmul(*a).view(-1, 1)
-
-    def get_idx_splits(self):
-        """Generate the set of operands corresponding to partial or full rows. E.g.
-
-        | _ x x x |            | x x x |
-        | x x x x |  ------>             + | x x x x |
-        | x x x x |                        | x x x x | +
-        | x x _ _ |                                      | x x |
-
-        Necessary to make the most use of vectorized matrix multiplication. Sequentially
-        calculating V[i, j] = V1[i, :] @ V2[:, j] leads to large latency.
-        """
-        row_start, col_start, row_end, col_end = self.get_index_range()
-        row_start_full, row_end_full = False, False
-        V1 = self.V1
-        V2 = self.V2
-        if col_start == 0:
-            row_start_full = True
-        if col_end == self.size_n - 1:
-            row_end_full = True
-        if row_start_full and row_end_full:
-            return {"start": (V1[row_start : row_end + 1, :], V2[:])}
-        if row_start_full:
-            # at least one additional full row, no full end
-            if row_end - row_start >= 2:
-                return {
-                    "start": (V1[row_start:row_end, :], V2[:]),
-                    "end": (V1[row_end, :], V2[:, : col_end + 1]),
-                }
-            # spans two rows, start row is full
-            elif row_end - row_start == 1:
-                return {
-                    "start": (V1[row_start, :], V2[:]),
-                    "end": (V1[row_end, :], V2[:, : col_end + 1]),
-                }
-            # spans single row
-            else:
-                return {"start": (V1[row_start, :], V2[:, : col_end + 1])}
-        if row_end_full:
-            # at least one additional full row, no full start
-            if row_end - row_start >= 2:
-                return {
-                    "start": (V1[row_start, :], V2[:, col_start:]),
-                    "end": (V1[row_start + 1 : row_end + 1, :], V2[:]),
-                }
-            # spans two rows, end row is full
-            elif row_end - row_start == 1:
-                return {
-                    "start": (V1[row_start, :], V2[:, col_start:]),
-                    "end": (V1[row_end, :], V2[:]),
-                }
-            else:
-                return {"start": (V1[row_start, :], V2[:, col_start:])}
-        if row_end - row_start >= 2:
-            # at least one full row
-            return {
-                "start": (V1[row_start, :], V2[:, col_start:]),
-                "mid": (V1[row_start + 1 : row_end, :], V2[:]),
-                "end": (V1[row_end, :], V2[:, : col_end + 1]),
-            }
-        elif row_end - row_start == 1:
-            # spans two rows, both incomplete
-            return {
-                "start": (V1[row_start, :], V2[:, col_start:]),
-                "end": (V1[row_end, :], V2[:, : col_end + 1]),
-            }
-        else:
-            return {
-                "start": (V1[row_start, :], V2[:, col_start]),
-                "end": (V1[row_end, :], V2[:, col_end]),
-            }
-
-    def get_index_range(self):
-        """Return global weight index range associated with given layer"""
-        offset = self.offset + 1
-        i1, j1 = divmod(offset, self.size_n)
-        i2, j2 = divmod(offset + self.w_num - 1, self.size_n)
-        return (i1, j1, i2, j2)
-
-    def __call__(self, module, inputs):
-        if self.verbose:
-            print("prehook activated: {} {}".format(self.name, self.module))
-        if len(self.ops) == 1:
-            module.weight = self.mm_map(*self.ops).reshape(self.w_size)
-        else:
-            a = tuple(map(self.mm_map, self.ops))
-            module.weight = torch.cat(a).reshape(self.w_size)
-
-        if self.bias:
-            b = torch.rand(self.b_num)
-            module.bias = b.reshape(self.b_size)
-
-
-def unload_layer(module, inputs, outputs):
-    """Forward hook for inner layers. Unloads weights and biases for given layer"""
-    # print("posthook activated: {}".format(module))
-    module.weight = None
-    module.bias = None
-
-
 class FeatherNet(nn.Module):
     """Implementation of "Structured Multi-Hashing for Model Compression"""
 
@@ -382,6 +249,139 @@ class FeatherNet(nn.Module):
         if self.verbose:
             print("\tIn Model: input size", x.size(), "output size", output.size())
         return output
+
+
+class LoadLayer:
+    """Forward prehook for inner layers. Load weights and biases from V1 and V2,
+    calculating on the fly. Must be as optimized as possible."""
+
+    def __init__(self, name, module, V1, V2, size_n, offset, verbose=False):
+        self.module = module
+        self.name = name
+        self.verbose = verbose
+        self.V1 = V1
+        self.V2 = V2
+        self.offset = offset
+        self.size_n = size_n
+        self.w_size = module.weight.size()
+        self.w_num = module.weight.numel()
+        self.w_p = module.weight_p  # weight scaler
+        self.num = self.w_num
+        self.bias = module.bias is not None
+        if self.bias:
+            self.b_size = module.bias.size()
+            self.b_num = module.bias.numel()
+            self.num += self.b_num
+            self.b_p = module.bias_p  # bias scaler
+
+        self.ops = self.get_list_ops()
+
+    def get_list_ops(self):
+        """Helper function to return list of operands"""
+        ops = self.get_idx_splits()
+        return [ops[k] for k in ops]
+
+    def mm_map(self, a):
+        """Helper function for matrix multiplication, including scale parameter"""
+        return self.w_p * torch.matmul(*a).view(-1, 1)
+
+    def get_idx_splits(self):
+        """Generate the set of operands corresponding to partial or full rows. E.g.
+
+        | _ x x x |            | x x x |
+        | x x x x |  ------>             + | x x x x |
+        | x x x x |                        | x x x x | +
+        | x x _ _ |                                      | x x |
+
+        Necessary to make the most use of vectorized matrix multiplication. Sequentially
+        calculating V[i, j] = V1[i, :] @ V2[:, j] leads to large latency.
+        """
+        row_start, col_start, row_end, col_end = self.get_index_range()
+        row_start_full, row_end_full = False, False
+        V1 = self.V1
+        V2 = self.V2
+        if col_start == 0:
+            row_start_full = True
+        if col_end == self.size_n - 1:
+            row_end_full = True
+        if row_start_full and row_end_full:
+            return {"start": (V1[row_start : row_end + 1, :], V2[:])}
+        if row_start_full:
+            # at least one additional full row, no full end
+            if row_end - row_start >= 2:
+                return {
+                    "start": (V1[row_start:row_end, :], V2[:]),
+                    "end": (V1[row_end, :], V2[:, : col_end + 1]),
+                }
+            # spans two rows, start row is full
+            elif row_end - row_start == 1:
+                return {
+                    "start": (V1[row_start, :], V2[:]),
+                    "end": (V1[row_end, :], V2[:, : col_end + 1]),
+                }
+            # spans single row
+            else:
+                return {"start": (V1[row_start, :], V2[:, : col_end + 1])}
+        if row_end_full:
+            # at least one additional full row, no full start
+            if row_end - row_start >= 2:
+                return {
+                    "start": (V1[row_start, :], V2[:, col_start:]),
+                    "end": (V1[row_start + 1 : row_end + 1, :], V2[:]),
+                }
+            # spans two rows, end row is full
+            elif row_end - row_start == 1:
+                return {
+                    "start": (V1[row_start, :], V2[:, col_start:]),
+                    "end": (V1[row_end, :], V2[:]),
+                }
+            else:
+                return {"start": (V1[row_start, :], V2[:, col_start:])}
+        if row_end - row_start >= 2:
+            # at least one full row
+            return {
+                "start": (V1[row_start, :], V2[:, col_start:]),
+                "mid": (V1[row_start + 1 : row_end, :], V2[:]),
+                "end": (V1[row_end, :], V2[:, : col_end + 1]),
+            }
+        elif row_end - row_start == 1:
+            # spans two rows, both incomplete
+            return {
+                "start": (V1[row_start, :], V2[:, col_start:]),
+                "end": (V1[row_end, :], V2[:, : col_end + 1]),
+            }
+        else:
+            return {
+                "start": (V1[row_start, :], V2[:, col_start]),
+                "end": (V1[row_end, :], V2[:, col_end]),
+            }
+
+    def get_index_range(self):
+        """Return global weight index range associated with given layer"""
+        offset = self.offset + 1
+        i1, j1 = divmod(offset, self.size_n)
+        i2, j2 = divmod(offset + self.w_num - 1, self.size_n)
+        return (i1, j1, i2, j2)
+
+    def __call__(self, module, inputs):
+        if self.verbose:
+            print("prehook activated: {} {}".format(self.name, self.module))
+        if len(self.ops) == 1:
+            module.weight = self.mm_map(*self.ops).reshape(self.w_size)
+        else:
+            a = tuple(map(self.mm_map, self.ops))
+            module.weight = torch.cat(a).reshape(self.w_size)
+
+        if self.bias:
+            b = torch.rand(self.b_num)
+            module.bias = b.reshape(self.b_size)
+
+
+def unload_layer(module, inputs, outputs):
+    """Forward hook for inner layers. Unloads weights and biases for given layer"""
+    # print("posthook activated: {}".format(module))
+    module.weight = None
+    module.bias = None
 
 
 def tests():
