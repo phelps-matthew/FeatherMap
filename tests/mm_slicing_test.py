@@ -4,18 +4,18 @@ import torch
 def get_block_rows(i, j, numels, n):
     j_start = j == 0
     rows = []
-    for x in range(numels):
+    for _ in range(numels+72):
         if j > n:
             if j_start:
                 rows.append(i)
-            i += 1
+            i = i + 1
             j = 0
             j_start = True
-        j += 1
+        j = j + 1
     return rows
 
 
- def get_row_set(V1, V2, i1, j1, i2, j2, numels, n):
+def get_row_set(V1, V2, i1, j1, i2, j2, numels, n):
     ops = {}
     block_rows = get_block_rows(i1, j1, numels, n)
     # Only one row, return whether complete or incomplete
@@ -63,15 +63,16 @@ def get_row_set_V(V, i1, j1, i2, j2, numels, n):
         return ops
 
 
-n, m = 5, 1
+n, m = 3342, 1
 V1 = torch.Tensor([list(range(n * q, n * (q + 1))) for q in range(m)]).reshape(n, m)
 V2 = torch.Tensor([list(range(m * r, m * (r + 1))) for r in range(n)]).reshape(m, n)
 V = torch.Tensor([list(range(n * q, n * (q + 1))) for q in range(n)])
-print(V1)
-print(V2)
-print(V)
-numels = 18
-(i1, j1, i2, j2) = (0, 1, 3, 3)
+#print(V1)
+#print(V2)
+#print(V)
+numels = 589824
+(i1, j1, i2, j2) = (652, 1816, 829, 105)
+#(i1, j1, i2, j2) = (476,184,652,1815)
 print(get_block_rows(i1, j1, numels, n))
-print(get_row_set_V(V, i1, j1, i2, j2, numels, n))
-print(get_row_set(V1, V2, i1, j1, i2, j2, numels, n))
+#print(get_row_set_V(V, i1, j1, i2, j2, numels, n))
+#print(get_row_set(V1, V2, i1, j1, i2, j2, numels, n))

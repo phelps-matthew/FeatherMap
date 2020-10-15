@@ -36,7 +36,8 @@ class LoadLayer:
         """Return global weight index range associated with given layer"""
         i1, j1 = divmod(self.offset + 1, self.size_n)
         i2, j2 = divmod(self.offset + self.w_num, self.size_n)
-        self.offset += self.w_num
+        #self.offset += self.w_num
+        print(self, [i1, j1], [i2, j2])
         return (i1, j1, i2, j2)
 
     def get_bias_index_range(self):
@@ -44,15 +45,17 @@ class LoadLayer:
         i1, j1 = divmod(self.offset + 1, self.size_n)
         i2, j2 = divmod(self.offset + self.b_num, self.size_n)
         self.offset += self.b_num
+        #print(self, [i1, j1], [i2, j2])
         return (i1, j1, i2, j2)
 
     @staticmethod
-    def get_block_rows(i: int, j: int, numels: int, n: int) -> list[int]:
+    def get_block_rows(i: int, j: int, numels: int, n: int) -> list:
         """Get list of full rows in an (n x n) matrix starting at index [i,j]
         and spanning numels elements. Returns row numbers"""
-        j_start = j == 0
+        print("get start block rows i,j n numels {} {} {} {}".format(i,j,n,numels))
+        j_start = (j == 0)
         rows = []
-        for x in range(numels):
+        for _ in range(numels):
             if j > n:
                 if j_start:
                     rows.append(i)
@@ -60,6 +63,7 @@ class LoadLayer:
                 j = 0
                 j_start = True
             j += 1
+        print("get block rows i,j n {} {} {}".format(i,j,n))
         return rows
 
     @staticmethod
@@ -118,9 +122,22 @@ class LoadLayer:
 
         # Load weights
         if len(self.w_ops) == 1:
+            a = self.mm_map(*self.w_ops)
+            print(self.w_num)
+            print(a.numel())
+            w_ops_dict = self.get_row_set(
+                self.V1, self.V2, *self.get_weight_index_range(), self.w_num, self.size_n
+            )
+            print(w_ops_dict.keys())
             module.weight = self.mm_map(*self.w_ops).reshape(self.w_size)
         else:
             a = tuple(map(self.mm_map, self.w_ops))
+            print(self.w_num)
+            print(torch.cat(a).numel())
+            w_ops_dict = self.get_row_set(
+                self.V1, self.V2, *self.get_weight_index_range(), self.w_num, self.size_n
+            )
+            print(w_ops_dict.keys())
             module.weight = torch.cat(a).reshape(self.w_size)
 
         # Load biases
@@ -295,7 +312,7 @@ class FeatherNet(nn.Module):
                 name, module, self.V1, self.V2, self.size_n, offset, self.verbose
             )
             offset += prehook_callable.w_num
-            if getattr(module, "bias", None):
+            if getattr(module, "bias", None) is not None:
                 offset += prehook_callable.b_num
 
             # Create callable posthook object
@@ -405,7 +422,7 @@ class FeatherNet(nn.Module):
 
 
 def tests():
-    from feathermap.models.resnet import ResNet34
+    from feathermap.models.resnet import ResNet34, ResNet18
 
     # Device configuration
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -424,14 +441,16 @@ def tests():
             for i in range(100):
                 yield torch.randn([1, 3, 32, 32])
 
-        base_model = ResNet34().to(device)
-        model = FeatherNet(base_model, exclude=(nn.BatchNorm2d), compress=0.5).to(device)
+        base_model = ResNet18().to(device)
+        model = FeatherNet(base_model, exclude=(nn.BatchNorm2d), compress=0.5, verbose=True).to(device)
         for name, module, kind in model.get_WandB_modules():
             p = getattr(module, kind)
-            print(name, kind, p.size())
-        # fmt: off
-        import ipdb,os; ipdb.set_trace(context=30)  # noqa
-        # fmt: on
+            #print(name, kind, p.size(), p.numel())
+        model.deploy()
+        for prehook in model.prehook_callables:
+            #print(prehook.w_num)
+            ...
+        print("Size n: {}".format(model.size_n))
         with torch.no_grad():
             for x in pic_gen():
                 model(x)
