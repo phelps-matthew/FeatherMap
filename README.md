@@ -32,9 +32,10 @@ To apply to a ResNet-34, simply import the model and wrap with `FeatherNet` modu
 ```python
 from feathermap.models.resnet import ResNet34
 from feathermap.feathernet import FeatherNet
+import torch.nn as nn
 
 base_model = ResNet34()
-model = FeatherNet(base_model, compress=0.10)
+model = FeatherNet(base_model, exclude=(nn.BatchNorm2d), compress=0.10)
 
 # Forward pass ...
 y = model(x)
