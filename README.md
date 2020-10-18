@@ -32,9 +32,9 @@ conda develop .
 │   ├── feathermap
 │   │   ├── dataloader.py   # CIFAR10 train, valid, and test data loading
 │   │   ├── feathernet.py   # Module for implementing compression
-│   │   ├── train.py        # Training, validation, and testing script
+│   │   ├── train.py        # Training script (argparse)
 │   │   ├── utils.py       
-│   │   ├── models          # Provided computer vision models to compress
+│   │   ├── models          # Sample computer vision models to compress
 │   │   │   ├── densenet.py
 │   │   │   ├── efficientnet.py
 │   │   │   ├── mobilenetv2.py
