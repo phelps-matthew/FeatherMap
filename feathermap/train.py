@@ -12,7 +12,7 @@ import argparse
 from feathermap.utils import progress_bar
 from feathermap.models.resnet import ResNet34
 from feathermap.feathernet import FeatherNet
-from feathermap.data_loader import get_train_valid_loader, get_test_loader
+from feathermap.dataloader import get_train_valid_loader, get_test_loader
 
 
 def main():
