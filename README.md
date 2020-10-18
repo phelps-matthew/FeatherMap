@@ -38,6 +38,7 @@ conda develop .
 │   │   │   ├── densenet.py
 │   │   │   ├── efficientnet.py
 │   │   │   ├── mobilenetv2.py
+│   │   │   ├── resnet.py
 │   │   │   └── ...
 ```
 ### General Usage
