@@ -285,11 +285,12 @@ class FeatherNet(nn.Module):
         torch.nn.init.uniform_(self._V2, -bound, bound)
 
     def _get_WandB(self) -> Iterator[Tuple[str, Tensor]]:
+        """Helper function to return weight AND bias attributes in order"""
         for name, module, kind in self._get_WandB_modules():
             yield name + "." + kind, getattr(module, kind)
 
     def _get_WandB_modules(self) -> Iterator[Tuple[str, nn.Module, str]]:
-        """Helper function to return weight and bias modules in order.
+        """Helper function to return weight AND bias modules in order.
         Adheres to `self.exclusion` list"""
         for name, module in self.named_modules():
             if isinstance(module, self._exclude):
@@ -300,7 +301,7 @@ class FeatherNet(nn.Module):
                 yield name, module, "bias"
 
     def _get_WorB_modules(self) -> Iterator[Tuple[str, nn.Module]]:
-        """Helper function to return weight or bias modules in order
+        """Helper function to return weight OR bias modules in order
         Adheres to `self.exclusion` list"""
         for name, module in self.named_modules():
             if isinstance(module, (self._exclude, FeatherNet)):
