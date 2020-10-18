@@ -33,20 +33,20 @@ def get_block_rows(i1: int, j1: int, i2: int, j2: int, n: int) -> List[int]:
 
 def get_row_set(V1, V2, i1, j1, i2, j2, numels, n):
     ops = {}
-    block_rows = get_block_rows(i1, j1, numels, n)
+    block_rows = get_block_rows(i1, j1, i2, j2, n)
     # Only one row, return whether complete or incomplete
     if i2 - i1 == 0:
         ops["top"] = (V1[i1, :], V2[:, j1 : j2 + 1])
         return ops
     # Has block rows
     if block_rows:
-        ops["block"] = (V1[block_rows, :], V2)
-        for row in range(i1, i2 + 1):
-            if row not in block_rows:
-                if row < min(block_rows):
-                    ops["top"] = (V1[row, :], V2[:, j1:])
-                else:
-                    ops["bottom"] = (V1[row, :], V2[:, : j2 + 1])
+        ops["block"] = (V1[range(*block_rows), :], V2)
+        # First row incomplete (from left)
+        if i1 < block_rows[0]:
+            ops["top"] = (V1[i1, :], V2[:, j1:])
+        # Last row incomplete
+        if i2 > (block_rows[1] - 1):
+            ops["bottom"] = (V1[i2, :], V2[:, : j2 + 1])
         return ops
     # Two rows, no blocks
     else:
@@ -77,6 +77,32 @@ def get_operand_slices(V, i1: int, j1: int, i2: int, j2: int, n: int) -> dict:
     else:
         ops["top"] = V[i1, j1:]
         ops["bottom"] = V[i2, : j2 + 1]
+        return ops
+
+
+def get_operands_str(i1: int, j1: int, i2: int, j2: int, n: int) -> dict:
+    """Return dictionary of operands representing complete slices of V1.dot(V2) from range
+    [i1, j1] to [i2, j2] corresponding to matrix of size (n x n)"""
+    ops = {}
+    block_rows = get_block_rows(i1, j1, i2, j2, n)
+    # Only one row, return whether complete or incomplete
+    if i2 - i1 == 0:
+        ops["top"] = "(V1[{}, :], V2[:, {} : {} + 1])".format(i1, j1, j2)
+        return ops
+    # Has block rows
+    if block_rows:
+        ops["block"] = "(V1[range(*{}), :], V2)".format(block_rows)
+        # First row incomplete (from left)
+        if i1 < block_rows[0]:
+            ops["top"] = "(V1[{}, :], V2[:, {}:])".format(i1, j1)
+        # Last row incomplete
+        if i2 > (block_rows[1] - 1):
+            ops["bottom"] = "(V1[{}, :], V2[:, : {} + 1])".format(i2, j2)
+        return ops
+    # Two rows, no blocks
+    else:
+        ops["top"] = "(V1[{}, :], V2[:, {}:])".format(i1, j1)
+        ops["bottom"] = "(V1[{}, :], V2[:, : {} + 1])".format(i2, j2)
         return ops
 
 
