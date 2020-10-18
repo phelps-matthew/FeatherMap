@@ -32,7 +32,6 @@ To compress a model such as Resnet-34, import the model from `feathermap/models/
 ```python
 from feathermap.models.resnet import ResNet34
 from feathermap.feathernet import FeatherNet
-import torch.nn as nn
 
 base_model = ResNet34()
 model = FeatherNet(base_model, compress=0.10)
