@@ -28,7 +28,7 @@ conda develop .
 ```
 ## Usage
 ### General Usage
-To apply to a ResNet-34, simply import the model and wrap with `FeatherNet` module, initializing with the desired compression. One can then proceed with forward and backward passes as normal.
+To compress a model such as Resnet-34, import the model from `feathermap/models/` and simply wrap the model with the `FeatherNet` module, initializing with the desired compression. One can then proceed with forward and backward passes as normal, as well as `state_dict` loading and saving.
 ```python
 from feathermap.models.resnet import ResNet34
 from feathermap.feathernet import FeatherNet
@@ -47,7 +47,7 @@ loss.backward()
 optimizer.step()
 ...
 ```
-See `feathermap/models/` for a zoo of CV models to compress.
+See `feathermap/models/` for a zoo of available CV models to compress.
 ### Training
 Models are trained on CIFAR-10 using `feathermap/train.py` (defaults to training ResNet-34). See the argument options by using the help flag `--help`.
 ```bash
