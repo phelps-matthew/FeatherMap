@@ -1,6 +1,7 @@
 """
-Create train, valid, test iterators for CIFAR-10 [1].
-[1]: https://gist.github.com/kevinzakka/d33bf8d6c7f06a9d8c76d97a7879f5cb
+Create train, valid, test iterators for CIFAR-10.
+Some code implemented from
+    https://gist.github.com/kevinzakka/d33bf8d6c7f06a9d8c76d97a7879f5cb
 """
 
 import torch
