@@ -77,9 +77,7 @@ base_model = ResNet34()
 if args.compress:
     model = FeatherNet(
         base_model,
-        exclude=(nn.BatchNorm2d),
         compress=args.compress,
-        constrain=args.constrain,
     )
 else:
     if args.lr != 0.1:
