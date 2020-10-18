@@ -111,8 +111,6 @@ def main():
                     total,
                 ),
             )
-            if batch_idx ==2:
-                break
 
     # Validation
     def validate(epoch: int) -> None:
