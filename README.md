@@ -27,6 +27,19 @@ pip install -e .
 conda develop .
 ```
 ## Usage
+```
+├── FeatherMap
+│   ├── feathermap
+│   │   ├── data_loader.py    # CIFAR10 train, valid, and test data loading
+│   │   ├── feathernet.py     # Module for implementing compression)
+│   │   ├── train.py          # Training, validation, and testing script)
+│   │   ├── utils.py       
+│   │   ├── models            # Zoo of candidate computer vision models to compress)
+│   │   │   ├── densenet.py
+│   │   │   ├── efficientnet.py
+│   │   │   ├── mobilenetv2.py
+│   │   │   └── ...
+```
 ### General Usage
 To compress a model such as Resnet-34, import the model from `feathermap/models/` and simply wrap the model with the `FeatherNet` module, initializing with the desired compression. One can then proceed with forward and backward passes as normal, as well as `state_dict` loading and saving.
 ```python
