@@ -1,6 +1,6 @@
 """
-Train CIFAR10 with PyTorch [1].
-[1]: https://github.com/kuangliu/pytorch-cifar
+Train compressed feathermap/models on CIFAR10.
+    - Progress bar inspried by https://github.com/kuangliu/pytorch-cifar
 """
 import torch
 import torch.nn as nn
