@@ -249,8 +249,8 @@ class FeatherNet(nn.Module):
 
     def __WandBtoV(self) -> None:
         """Calculate V = V1*V2 and allocate to all weights and biases"""
-        self.V = torch.matmul(self._V1, self._V2)
-        V = self.V.view(-1, 1)  # V.is_contiguous() = True
+        self._V = torch.matmul(self._V1, self._V2)
+        V = self._V.view(-1, 1)  # V.is_contiguous() = True
         i = 0
         for name, module, kind in self._get_WandB_modules():
             v = getattr(module, kind)
@@ -389,12 +389,14 @@ def tests():
         def pic_gen():
             for i in range(2):
                 yield torch.randn([1, 3, 32, 32])
-
         base_model = ResNet34().to(device)
         model = FeatherNet(base_model, compress=0.5, verbose=True).to(device)
         for name, module, kind in model._get_WandB_modules():
             p = getattr(module, kind)
             print(name, kind, p.size(), p.numel())
+        with torch.no_grad():
+            for x in pic_gen():
+                model(x)
         model.deploy()
         with torch.no_grad():
             for x in pic_gen():
