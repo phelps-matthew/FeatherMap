@@ -247,7 +247,7 @@ class FeatherNet(nn.Module):
                     for BatchNorm2d layers."
                 )
 
-    def __WandBtoV(self) -> None:
+    def __map_V_to_WandB(self) -> None:
         """Calculate V = V1*V2 and allocate to all weights and biases"""
         self._V = torch.matmul(self._V1, self._V2)
         V = self._V.view(-1, 1)  # V.is_contiguous() = True
@@ -331,14 +331,14 @@ class FeatherNet(nn.Module):
     def load_state_dict(self, *args, **kwargs) -> Dict:
         """Update weights and biases from stored V1, V2 values"""
         out = nn.Module.load_state_dict(self, *args, *kwargs)
-        self.__WandBtoV()
+        self.__map_V_to_WandB()
         return out
 
     def train(self, mode: bool = True) -> None:
         """Remove forward hooks, load weights and biases.
         Note: `self.eval()` calls `self.train(False)`"""
         self.training = mode
-        self.__WandBtoV()
+        self.__map_V_to_WandB()
         return nn.Module.train(self.module, mode)
 
     def deploy(self, mode: bool = True) -> None:
@@ -359,11 +359,11 @@ class FeatherNet(nn.Module):
             self.__unregister_hooks(self.prehooks)
             self.__unregister_hooks(self.posthooks)
             self.__unregister_hooks(self.prehook_outer)
-            self.__WandBtoV()
+            self.__map_V_to_WandB()
 
     def forward(self, x: Tensor) -> Tensor:
         if self.training:
-            self.__WandBtoV()
+            self.__map_V_to_WandB()
         output = self.module(x)
         if self._verbose:
             print("\tIn Model: input size", x.size(), "output size", output.size())
@@ -379,7 +379,7 @@ def tests():
     def linear_test():
         lmodel = nn.Linear(2, 4).to(device)
         flmodel = FeatherNet(lmodel, compress=0.5)
-        flmodel.__WandBtoV()
+        flmodel.__VtoWandB()
         print(flmodel.get_num_WandB(), flmodel._size_n, flmodel._size_m)
         print("V: {}".format(flmodel.V))
         flmodel.__WandBtoV()
