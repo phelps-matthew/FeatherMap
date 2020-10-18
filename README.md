@@ -30,7 +30,7 @@ conda develop .
 ```
 ├── FeatherMap
 │   ├── feathermap
-│   │   ├── dataloader.py  # CIFAR10 train, valid, and test data loading
+│   │   ├── dataloader.py   # CIFAR10 train, valid, and test data loading
 │   │   ├── feathernet.py   # Module for implementing compression
 │   │   ├── train.py        # Training, validation, and testing script
 │   │   ├── utils.py       
