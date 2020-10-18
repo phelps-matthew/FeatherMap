@@ -132,7 +132,14 @@ class UnloadLayer:
 
 
 class FeatherNet(nn.Module):
-    """Compresses user-defined PyTorch models based on structured multi-hashing"""
+    """
+    Compresses user-defined PyTorch models based on structured multi-hashing.
+
+    Calculates matrix product V1 * V2 = V, and maps each element of V to global weight
+    matrix. The size of V1 and V2 are determined based on compression. See README.md for
+    an overview of structured mutli-hashing.
+    """
+
 
     def __init__(
         self,
