@@ -30,11 +30,11 @@ conda develop .
 ```
 ├── FeatherMap
 │   ├── feathermap
-│   │   ├── data_loader.py # CIFAR10 train, valid, and test data loading
-│   │   ├── feathernet.py  # Module for implementing compression
-│   │   ├── train.py       # Training, validation, and testing script
+│   │   ├── data_loader.py  # CIFAR10 train, valid, and test data loading
+│   │   ├── feathernet.py   # Module for implementing compression
+│   │   ├── train.py        # Training, validation, and testing script
 │   │   ├── utils.py       
-│   │   ├── models         # Zoo of candidate computer vision models to compress
+│   │   ├── models          # Provided computer vision models to compress
 │   │   │   ├── densenet.py
 │   │   │   ├── efficientnet.py
 │   │   │   ├── mobilenetv2.py
