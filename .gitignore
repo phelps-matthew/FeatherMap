@@ -1,5 +1,6 @@
 # MP
-env/
+/envs
+envs/
 data/
 FeatherMap/feathermap/data/
 feathermap/data/

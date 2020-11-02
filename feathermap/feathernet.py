@@ -398,7 +398,7 @@ def tests():
             for i in range(2):
                 yield torch.randn([1, 3, 32, 32])
         base_model = ResNet34().to(device)
-        model = FeatherNet(base_model, compress=0.5, verbose=True).to(device)
+        model = FeatherNet(base_model, compress=1.0, verbose=True).to(device)
         for name, module, kind in model._get_WandB_modules():
             p = getattr(module, kind)
             print(name, kind, p.size(), p.numel())
@@ -409,6 +409,9 @@ def tests():
         with torch.no_grad():
             for x in pic_gen():
                 model(x)
+                # fmt: off
+                import ipdb,os; ipdb.set_trace(context=30)  # noqa
+                # fmt: on
 
     res_test()
 
