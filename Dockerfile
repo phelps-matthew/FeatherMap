@@ -9,4 +9,4 @@ COPY feathermap ./feathermap
 RUN pip3 install -e .
 
 # command to run on container start
-ENTRYPOINT ["python", "feathermap/ffnn_main.py"]
+ENTRYPOINT ["python", "feathermap/train.py"]
