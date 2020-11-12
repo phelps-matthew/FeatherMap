@@ -409,9 +409,6 @@ def tests():
         with torch.no_grad():
             for x in pic_gen():
                 model(x)
-                # fmt: off
-                import ipdb,os; ipdb.set_trace(context=30)  # noqa
-                # fmt: on
 
     res_test()
 
