@@ -57,7 +57,7 @@ def main():
     )
     test_loader = get_test_loader(data_dir=args.data_dir, **cuda_kwargs)
 
-    best_acc = 0  # best test accuracy
+    best_acc = 0  # best validation accuracy
     start_epoch = 0  # start from epoch 0 or last checkpoint epoch
     save_display = False
 
