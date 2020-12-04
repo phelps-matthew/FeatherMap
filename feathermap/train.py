@@ -63,7 +63,6 @@ def main():
 
     # Load checkpoint
     if args.resume:
-        # Load checkpoint.
         print("==> Resuming from checkpoint..")
         assert os.path.isdir("checkpoint"), "Error: no checkpoint directory found!"
         checkpoint = torch.load("./checkpoint/" + args.ckpt_name)
