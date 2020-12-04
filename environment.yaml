@@ -4,6 +4,7 @@ channels:
 dependencies:
   - numpy
   - pandas
+  - packaging
   - pytorch
   - torchvision
   - matplotlib

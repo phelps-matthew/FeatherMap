@@ -6,6 +6,7 @@ setup(
     install_requires=[
         "torch",
         "torchvision",
+        "packing",
         "numpy",
         "pandas",
         "matplotlib",
