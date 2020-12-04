@@ -7,6 +7,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.backends.cudnn as cudnn
 from torch.optim.lr_scheduler import MultiStepLR
+from packaging import version
 import os
 import argparse
 from feathermap.utils import progress_bar
@@ -79,9 +80,15 @@ def main():
 
     def train(epoch: int) -> None:
         """Train on CIFAR10 per epoch"""
+        # maintain backward compatibility; get_last_lr requires PyTorch >= 1.4
+        last_lr = (
+            scheduler.get_last_lr()[0]
+            if version.parse(torch.__version__) >= version.parse("1.4")
+            else scheduler.get_lr()[0]
+        )
         print(
             "\nEpoch: {}  |  Compression: {:.2f}  |  lr: {:<6}".format(
-                epoch, args.compress, scheduler.get_last_lr()[0]
+                epoch, args.compress, last_lr
             )
         )
         model.train()
@@ -186,7 +193,9 @@ def main():
                     ),
                 )
 
-    # Start train/eval loop over epochs
+    # Train up to 300 epochs
+    # *Displays* concurent performance on validation and test set while training,
+    # but strictly uses validation set to determine early stopping
     print("==> Initiate Training..")
     for epoch in range(start_epoch, 300):
         train(epoch)
