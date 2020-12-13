@@ -1,7 +1,7 @@
+import unittest
 import torch
 from feathermap.utils import get_block_rows
 from feathermap.feathernet import LoadLayer
-import unittest
 
 
 class TestBlockRows(unittest.TestCase):
@@ -11,6 +11,7 @@ class TestBlockRows(unittest.TestCase):
     """
 
     def setUp(self):
+        """ Set up fixture covering index ranges and expected operand returns """
         m = 1
         self.n = 3342
         self.V1 = torch.Tensor(
@@ -49,6 +50,7 @@ class TestBlockRows(unittest.TestCase):
             (3000, 1816, 3091, self.n - 1),
         ]
 
+        # expected operands from covered index ranges above
         self.operands = [
             {"top": (self.V1[42, :], self.V2[:, 0 : 3341 + 1])},
             {"block": (self.V1[range(*[652, 654]), :], self.V2)},
@@ -149,4 +151,3 @@ class TestBlockRows(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    # mp_test()
