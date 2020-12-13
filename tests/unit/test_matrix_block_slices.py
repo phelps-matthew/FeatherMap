@@ -24,7 +24,7 @@ class TestBlockRows(unittest.TestCase):
             [list(range(self.n * q, self.n * (q + 1))) for q in range(self.n)]
         )
 
-        # i1, j2, i2, j2
+        # row1, col1, row2, col2
         self.idxs = [
             # All one row complete
             (42, 0, 42, self.n - 1),
