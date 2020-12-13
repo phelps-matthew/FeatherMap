@@ -1,9 +1,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
-import matplotlib.pyplot as plt
-from torch.nn import Parameter
-from feathermap import feathernet
+from matplotlib import pyplot as plt
 
 
 # Hyper-parameters

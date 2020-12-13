@@ -23,21 +23,21 @@ def forward(x, W, bias):
     return F.linear(x, W, bias)
 
 
-#print("V {}".format(V))
-#print("W {}".format(W))
+print("V {}".format(V))
+print("W {}".format(W))
 update(V, W)
-#print("V {}".format(V))
-#print("W {}".format(W))
+print("V {}".format(V))
+print("W {}".format(W))
 
 
 x = torch.randn(2)
 g = torch.ones(2)
-#print(x)
-#print(forward(x, W, bias).norm)
+print(x)
+print(forward(x, W, bias).norm)
 y = forward(x, W, bias)
 print(y)
 print(y.reshape(-1,1))
-#loss_fn = F.cross_entropy(y.reshape(1, -1), torch.ones(1, 2))
-# print(loss_fn)
+loss_fn = F.cross_entropy(y.reshape(1, -1), torch.ones(1, 2))
+print(loss_fn)
 
 forward(x, W, bias).backward(g)
