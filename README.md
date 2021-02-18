@@ -1,7 +1,7 @@
 # &#x1f54a; FeatherMap
 
 ## What is FeatherMap?
-FeatherMap is a tool that compresses deep neural networks. Centered around computer vision models, it implements the Google Research paper [Structured Multi-Hashing for Model Compression (CVPR 2020)](references/Structured_Multi-Hashing_for_Model_Compression_CVPR_2020.pdf). Taking the form of a Python package, the tool takes a user-defined PyTorch model and compresses it to a desired factor without modification to the underlying architecture. Using its simple API, FeatherMap can easily be applied across a broad array of models. 
+FeatherMap is a tool that compresses deep neural networks. Centered around computer vision models, it implements the Google Research paper [Structured Multi-Hashing for Model Compression (CVPR 2020)](https://openaccess.thecvf.com/content_CVPR_2020/papers/Eban_Structured_Multi-Hashing_for_Model_Compression_CVPR_2020_paper.pdf). Taking the form of a Python package, the tool takes a user-defined PyTorch model and compresses it to a desired factor without modification to the underlying architecture. Using its simple API, FeatherMap can easily be applied across a broad array of models. 
 
 ## Table of Contents
   * [Installation](#installation)
@@ -100,5 +100,6 @@ What we have effectively done with this mapping is a reduction of the number of 
 Additional Remarks:
 - To obtain a target compression factor, generalize the respective dimension of the rows and columns from 2 to m, to thus begin with a total of 2mn tunable parameters. The compression factor will then be 2mn/n^2 = 2m/n. By varying m, one can achieve varying levels of compression.
 - For practical deployment, in order to constrain RAM consumption, each weight must be calculated 'on the fly' during the foward pass. Such additional calculations will induce latency overhead; however, the 'structured' nature of this multi-hashing approach embraces memory locality and I have found that for small compression factors the overhead is minimal (see [Results](#results)).
+- An earlier reference to compression via hashing: [Compressing Neural Networks with the Hashing Trick](https://arxiv.org/abs/1504.04788)
 
 
